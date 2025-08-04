@@ -1,8 +1,7 @@
-use opencv::imgproc::ColorConversionCodes;
 use opencv::prelude::*;
-use opencv::{Result, highgui, videoio};
+use opencv::{highgui, videoio, Result};
 
-use std::sync::mpsc::{Receiver, Sender, SyncSender, channel, sync_channel};
+use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
 use std::thread;
 use std::time::SystemTime;
 
@@ -10,16 +9,19 @@ enum CameraMessage {
     GetImage,
     Quit,
 }
+
 enum PipelineMessage {
     GenerateImage,
     SetReference,
     Quit,
 }
+
 #[derive(Debug, Clone, Copy)]
 enum ImageColor {
     Rgb8,
     Gray8,
 }
+
 #[derive(Debug)]
 struct CameraResult {
     data: Result<Mat>,
@@ -61,11 +63,17 @@ fn camera_thread(
         }
     }
 }
+
 fn compute_resulting_image(_image: CameraResult, _reference: &Option<Mat>) -> Result<Mat> {
     Err(opencv::Error {
         code: 0,
         message: "not implemented yet".to_string(),
     })
+}
+fn try_sending<T>(sender: &SyncSender<T>, message: T, thread_name: &str, queue_name: &str) {
+    if let Err(error) = sender.send(message) {
+        eprint!("Send error.{thread_name}, {queue_name}. {error}")
+    }
 }
 
 fn pipeline_thread(
@@ -77,23 +85,23 @@ fn pipeline_thread(
     let mut reference_image: Option<Mat> = None;
     loop {
         //always query an image
-        match camera_control_queue.send(CameraMessage::GetImage) {
-            Err(error) => eprint!(
-                "Send error.Pipeline thread, camera control queue. Could not query image.{error}"
-            ),
-            Ok(..) => {}
-        }
+        try_sending(
+            &camera_control_queue,
+            CameraMessage::GetImage,
+            "pipeline_thread",
+            "camera control queue",
+        );
 
         //wait for msg from the window thread
         match pipeline_control_queue.recv() {
             Ok(msg) => match msg {
                 PipelineMessage::Quit => {
-                    match camera_control_queue.send(CameraMessage::Quit) {
-                        Err(error) => eprint!(
-                            "Pipeline Thread, camera_control_queue. Send error, could not send quit message. {error}"
-                        ),
-                        Ok(..) => {}
-                    };
+                    try_sending(
+                        &camera_control_queue,
+                        CameraMessage::Quit,
+                        "pipeline thread",
+                        "camera control queue",
+                    );
                     return Ok(());
                 }
                 PipelineMessage::GenerateImage => match image_grabbing_queue.recv() {
@@ -143,7 +151,12 @@ fn window_thread(
     highgui::named_window(window, highgui::WINDOW_AUTOSIZE)?;
 
     loop {
-        pipeline_control_queue.send(PipelineMessage::GenerateImage);
+        try_sending(
+            &pipeline_control_queue,
+            PipelineMessage::GenerateImage,
+            "window thread",
+            "pipeline_control_queue",
+        );
         match result_queue.recv() {
             Ok(result) => match result {
                 Ok(mat) => highgui::imshow(window, &mat)?,
@@ -158,14 +171,27 @@ fn window_thread(
 
         let key = highgui::wait_key(10)?;
         if key > 0 && key != 255 {
-            pipeline_control_queue.send(PipelineMessage::Quit);
+            try_sending(
+                &pipeline_control_queue,
+                PipelineMessage::Quit,
+                "window_thread",
+                "pipeline_control_queue",
+            );
+            return Ok(());
+        }
+        if key == 255 {
+            try_sending(
+                &pipeline_control_queue,
+                PipelineMessage::SetReference,
+                "window_thread",
+                "pipeline_control_queue",
+            );
             return Ok(());
         }
     }
 }
 fn main() -> Result<()> {
     let camera_index = 0;
-    let window = "video capture";
 
     let (image_sender, image_receiver): (SyncSender<CameraResult>, Receiver<CameraResult>) =
         sync_channel(1);
@@ -177,12 +203,11 @@ fn main() -> Result<()> {
         SyncSender<PipelineMessage>,
         Receiver<PipelineMessage>,
     ) = sync_channel(1);
-
     let (result_sender, result_receiver): (SyncSender<Result<Mat>>, Receiver<Result<Mat>>) =
         sync_channel(1);
 
     let grab_handle =
-        thread::spawn(move || camera_thread(camera_control_receiver, image_sender, 0));
+        thread::spawn(move || camera_thread(camera_control_receiver, image_sender, camera_index));
     let pipeline_handle = thread::spawn(move || {
         pipeline_thread(
             camera_control_sender,
@@ -195,7 +220,7 @@ fn main() -> Result<()> {
         thread::spawn(move || window_thread(pipeline_control_sender, result_receiver));
 
     [grab_handle, pipeline_handle, window_handle].map(|t| {
-        t.join();
+        let _res = t.join().unwrap();
     });
     Ok(())
 }
