@@ -61,8 +61,11 @@ fn camera_thread(
         }
     }
 }
-fn compute_resulting_image(image: CameraResult, reference: &Option<Mat>) -> Result<Mat> {
-    Err("not implemented yet")
+fn compute_resulting_image(_image: CameraResult, _reference: &Option<Mat>) -> Result<Mat> {
+    Err(opencv::Error {
+        code: 0,
+        message: "not implemented yet".to_string(),
+    })
 }
 
 fn pipeline_thread(
@@ -131,6 +134,35 @@ fn pipeline_thread(
     }
 }
 
+//todo replace with something but opencv, this is just for testing purposes
+fn window_thread(
+    pipeline_control_queue: SyncSender<PipelineMessage>,
+    result_queue: Receiver<Result<Mat>>,
+) -> Result<()> {
+    let window = "platos beamer";
+    highgui::named_window(window, highgui::WINDOW_AUTOSIZE)?;
+
+    loop {
+        pipeline_control_queue.send(PipelineMessage::GenerateImage);
+        match result_queue.recv() {
+            Ok(result) => match result {
+                Ok(mat) => highgui::imshow(window, &mat)?,
+                Err(error) => {
+                    eprint!("Window thread reuslt_queue. Received frame is error {error}")
+                }
+            },
+            Err(error) => eprint!(
+                "Receiver error(Window thread, result_queue. COuld not receive frame {error})"
+            ),
+        }
+
+        let key = highgui::wait_key(10)?;
+        if key > 0 && key != 255 {
+            pipeline_control_queue.send(PipelineMessage::Quit);
+            return Ok(());
+        }
+    }
+}
 fn main() -> Result<()> {
     let camera_index = 0;
     let window = "video capture";
@@ -149,22 +181,21 @@ fn main() -> Result<()> {
     let (result_sender, result_receiver): (SyncSender<Result<Mat>>, Receiver<Result<Mat>>) =
         sync_channel(1);
 
-    highgui::named_window(window, highgui::WINDOW_AUTOSIZE)?;
-    let mut cam = videoio::VideoCapture::new(camera_index, videoio::CAP_ANY)?; // 0 is the default camera
-    let opened = videoio::VideoCapture::is_opened(&cam)?;
-    if !opened {
-        panic!("Unable to open default camera!")
-    }
-    loop {
-        let mut frame = Mat::default();
-        cam.read(&mut frame)?;
-        if frame.size()?.width > 0 {
-            highgui::imshow(window, &frame)?;
-        }
-        let key = highgui::wait_key(10)?;
-        if key > 0 && key != 255 {
-            break;
-        }
-    }
+    let grab_handle =
+        thread::spawn(move || camera_thread(camera_control_receiver, image_sender, 0));
+    let pipeline_handle = thread::spawn(move || {
+        pipeline_thread(
+            camera_control_sender,
+            image_receiver,
+            pipeline_control_receiver,
+            result_sender,
+        )
+    });
+    let window_handle =
+        thread::spawn(move || window_thread(pipeline_control_sender, result_receiver));
+
+    [grab_handle, pipeline_handle, window_handle].map(|t| {
+        t.join();
+    });
     Ok(())
 }
