@@ -1,7 +1,7 @@
 use opencv::prelude::*;
-use opencv::{highgui, videoio, Result};
+use opencv::{Result, highgui, videoio};
 
-use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
+use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread;
 use std::time::SystemTime;
 
@@ -19,7 +19,7 @@ enum PipelineMessage {
 #[derive(Debug, Clone, Copy)]
 enum ImageColor {
     Rgb8,
-    Gray8,
+    //Gray8,
 }
 
 #[derive(Debug)]
@@ -64,12 +64,25 @@ fn camera_thread(
     }
 }
 
-fn compute_resulting_image(_image: CameraResult, _reference: &Option<Mat>) -> Result<Mat> {
-    Err(opencv::Error {
-        code: 0,
-        message: "not implemented yet".to_string(),
-    })
+fn compute_resulting_image(
+    image: CameraResult,
+    reference: &Result<Mat>,
+    compute_fn: fn(Mat, Mat) -> Result<Mat>,
+) -> Result<Mat> {
+    let input_image = image.data?;
+    let reference_image = match reference {
+        Ok(res) => res.clone(),
+        Err(_) => {
+            return Err(opencv::Error {
+                code: 1,
+                message: "Reference image not set".to_string(),
+            });
+        }
+    };
+    println!("{:?} {:?}", image.format, image.timestamp);
+    compute_fn(input_image, reference_image)
 }
+
 fn try_sending<T>(sender: &SyncSender<T>, message: T, thread_name: &str, queue_name: &str) {
     if let Err(error) = sender.send(message) {
         eprint!("Send error.{thread_name}, {queue_name}. {error}")
@@ -81,8 +94,12 @@ fn pipeline_thread(
     image_grabbing_queue: Receiver<CameraResult>,
     pipeline_control_queue: Receiver<PipelineMessage>,
     result_queue: SyncSender<Result<Mat>>,
+    compute_fn: fn(Mat, Mat) -> Result<Mat>,
 ) -> Result<()> {
-    let mut reference_image: Option<Mat> = None;
+    let mut reference_image: Result<Mat> = Err(opencv::Error {
+        code: 1,
+        message: "Reference image not set yet".to_string(),
+    });
     loop {
         //always query an image
         try_sending(
@@ -109,7 +126,8 @@ fn pipeline_thread(
                         eprint!("receiver error (Pipeline thread, image_grabbing_queue) {error}")
                     }
                     Ok(result) => {
-                        let output_image = compute_resulting_image(result, &reference_image);
+                        let output_image =
+                            compute_resulting_image(result, &reference_image, compute_fn);
                         match result_queue.send(output_image) {
                             Ok(..) => {}
                             Err(error) => {
@@ -124,11 +142,12 @@ fn pipeline_thread(
                     }
                     Ok(result) => {
                         reference_image = match result.data {
-                            Ok(image_data) => Some(image_data),
+                            Ok(image_data) => Ok(image_data),
                             Err(error) => {
                                 eprint!(
                                     "receiver error (Pipeline thread, image_grabbing_queue. Could not set reference image.) {error}"
                                 );
+                                //return current reference image
                                 reference_image
                             }
                         }
@@ -214,6 +233,7 @@ fn main() -> Result<()> {
             image_receiver,
             pipeline_control_receiver,
             result_sender,
+            |img, _ref_img| Ok(img),
         )
     });
     let window_handle =

@@ -13,6 +13,6 @@
   ];
 
   git-hooks.hooks.clippy.enable = true;
-  #git-hooks.hooks.rustfmt.enable = true;
+  git-hooks.hooks.rustfmt.enable = true;
   env.LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
 }
