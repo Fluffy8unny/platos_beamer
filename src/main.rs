@@ -169,6 +169,14 @@ fn window_thread(
     let window = "platos beamer";
     highgui::named_window(window, highgui::WINDOW_AUTOSIZE)?;
 
+    //init pipeline
+    try_sending(
+        &pipeline_control_queue,
+        PipelineMessage::SetReference,
+        "window thread",
+        "pipeline_control_queue",
+    );
+
     loop {
         try_sending(
             &pipeline_control_queue,
