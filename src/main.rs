@@ -1,3 +1,4 @@
+use opencv::core::MatExpr;
 use opencv::prelude::*;
 use opencv::{Result, highgui, videoio};
 
@@ -39,7 +40,10 @@ fn camera_thread(
     loop {
         match camera_controller_queue.recv() {
             Ok(msg) => match msg {
-                CameraMessage::Quit => return Ok(()),
+                CameraMessage::Quit => {
+                    println!("Quitting grabber gracefully");
+                    return Ok(());
+                }
                 CameraMessage::GetImage => {
                     let mut frame = Mat::default();
                     let camera_result = cam.read(&mut frame);
@@ -67,7 +71,7 @@ fn camera_thread(
 fn compute_resulting_image(
     image: CameraResult,
     reference: &Result<Mat>,
-    compute_fn: fn(Mat, Mat) -> Result<Mat>,
+    compute_fn: fn(Mat, Mat) -> Result<MatExpr>,
 ) -> Result<Mat> {
     let input_image = image.data?;
     let reference_image = match reference {
@@ -80,7 +84,15 @@ fn compute_resulting_image(
         }
     };
     println!("{:?} {:?}", image.format, image.timestamp);
-    compute_fn(input_image, reference_image)
+    let res = compute_fn(input_image, reference_image);
+
+    match res {
+        Ok(res) => res.to_mat(),
+        Err(..) => Err(opencv::Error {
+            code: 2,
+            message: "Math error in compute function".to_string(),
+        }),
+    }
 }
 
 fn try_sending<T>(sender: &SyncSender<T>, message: T, thread_name: &str, queue_name: &str) {
@@ -94,7 +106,7 @@ fn pipeline_thread(
     image_grabbing_queue: Receiver<CameraResult>,
     pipeline_control_queue: Receiver<PipelineMessage>,
     result_queue: SyncSender<Result<Mat>>,
-    compute_fn: fn(Mat, Mat) -> Result<Mat>,
+    compute_fn: fn(Mat, Mat) -> Result<MatExpr>,
 ) -> Result<()> {
     let mut reference_image: Result<Mat> = Err(opencv::Error {
         code: 1,
@@ -119,6 +131,10 @@ fn pipeline_thread(
                         "pipeline thread",
                         "camera control queue",
                     );
+                    //discard queried image. If we don't query before we know what happens we waste
+                    //time, but here we have to discard one
+                    let _ = image_grabbing_queue.recv();
+                    println!("Quitting pipeline gracefully");
                     return Ok(());
                 }
                 PipelineMessage::GenerateImage => match image_grabbing_queue.recv() {
@@ -204,9 +220,10 @@ fn window_thread(
                 "window_thread",
                 "pipeline_control_queue",
             );
+            println!("Quitting window gracefully");
             return Ok(());
         }
-        if key == 255 {
+        if key == 878255 {
             try_sending(
                 &pipeline_control_queue,
                 PipelineMessage::SetReference,
@@ -241,13 +258,13 @@ fn main() -> Result<()> {
             image_receiver,
             pipeline_control_receiver,
             result_sender,
-            |img, _ref_img| Ok(img),
+            |img, ref_img| (img - ref_img).into_result(),
         )
     });
     let window_handle =
         thread::spawn(move || window_thread(pipeline_control_sender, result_receiver));
 
-    [grab_handle, pipeline_handle, window_handle].map(|t| {
+    [window_handle, pipeline_handle, grab_handle].map(|t| {
         let _res = t.join().unwrap();
     });
     Ok(())
