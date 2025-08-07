@@ -2,7 +2,7 @@ mod bg_subtract;
 mod threads;
 mod types;
 
-use crate::bg_subtract::NaiveSubtractor;
+use crate::bg_subtract::{MogSettings, MogSubtractor, NaiveSubtractor};
 use crate::threads::{bg_subtract_pipeline, camera_thread, display_window_thread};
 use crate::types::thread_types::{CameraMessage, CameraResult, PipelineMessage};
 
@@ -14,6 +14,13 @@ use std::thread;
 
 fn main() -> Result<()> {
     let camera_index = 0;
+    /*
+    let bg_subtractor =
+            Box::new(NaiveSubtractor {
+                background_approximation: Mat::default(),
+            });
+    */
+    let bg_subtractor = Box::new(MogSubtractor::new(MogSettings::default())?);
 
     let (image_sender, image_receiver): (SyncSender<CameraResult>, Receiver<CameraResult>) =
         sync_channel(1);
@@ -37,9 +44,7 @@ fn main() -> Result<()> {
             image_receiver,
             pipeline_control_receiver,
             result_sender,
-            Box::new(NaiveSubtractor {
-                background_approximation: Mat::default(),
-            }),
+            bg_subtractor,
         )
     });
     let window_handle =
