@@ -1,4 +1,4 @@
-use opencv::core::MatExpr;
+use opencv::core::{MatExpr, MatExprResult, Vector, absdiff, greater_than_mat_f64, split};
 use opencv::prelude::*;
 use opencv::{Result, highgui, videoio};
 
@@ -17,17 +17,16 @@ enum PipelineMessage {
     Quit,
 }
 
-#[derive(Debug, Clone, Copy)]
-enum ImageColor {
-    Rgb8,
-    //Gray8,
-}
-
 #[derive(Debug)]
 struct CameraResult {
     data: Result<Mat>,
-    format: ImageColor,
     timestamp: SystemTime,
+}
+
+fn try_sending<T>(sender: &SyncSender<T>, message: T, thread_name: &str, queue_name: &str) {
+    if let Err(error) = sender.send(message) {
+        eprintln!("Send error.{thread_name}, {queue_name}. {error}")
+    }
 }
 
 fn camera_thread(
@@ -36,7 +35,6 @@ fn camera_thread(
     camera_index: i32,
 ) -> Result<()> {
     let mut cam = videoio::VideoCapture::new(camera_index, videoio::CAP_ANY)?;
-    let camera_format = ImageColor::Rgb8;
     loop {
         match camera_controller_queue.recv() {
             Ok(msg) => match msg {
@@ -51,14 +49,16 @@ fn camera_thread(
                         Err(e) => Err(e),
                         Ok(..) => Ok(frame),
                     };
-                    match image_queue.send(CameraResult {
-                        data: image,
-                        format: camera_format,
-                        timestamp: SystemTime::now(),
-                    }) {
-                        Ok(..) => {}
-                        Err(error) => eprint!("sender error {error}"),
-                    };
+
+                    try_sending(
+                        &image_queue,
+                        CameraResult {
+                            data: image,
+                            timestamp: SystemTime::now(),
+                        },
+                        "grabber thread",
+                        "image_queue",
+                    );
                 }
             },
             Err(error) => {
@@ -83,7 +83,7 @@ fn compute_resulting_image(
             });
         }
     };
-    println!("{:?} {:?}", image.format, image.timestamp);
+    println!("{:?}", image.timestamp);
     let res = compute_fn(input_image, reference_image);
 
     match res {
@@ -92,12 +92,6 @@ fn compute_resulting_image(
             code: 2,
             message: "Math error in compute function".to_string(),
         }),
-    }
-}
-
-fn try_sending<T>(sender: &SyncSender<T>, message: T, thread_name: &str, queue_name: &str) {
-    if let Err(error) = sender.send(message) {
-        eprint!("Send error.{thread_name}, {queue_name}. {error}")
     }
 }
 
@@ -139,28 +133,28 @@ fn pipeline_thread(
                 }
                 PipelineMessage::GenerateImage => match image_grabbing_queue.recv() {
                     Err(error) => {
-                        eprint!("receiver error (Pipeline thread, image_grabbing_queue) {error}")
+                        eprintln!("receiver error (Pipeline thread, image_grabbing_queue) {error}")
                     }
                     Ok(result) => {
                         let output_image =
                             compute_resulting_image(result, &reference_image, compute_fn);
-                        match result_queue.send(output_image) {
-                            Ok(..) => {}
-                            Err(error) => {
-                                eprint!("Sending error(Pipeline thread,result_queue) {error}")
-                            }
-                        }
+                        try_sending(
+                            &result_queue,
+                            output_image,
+                            "pipeline thread",
+                            "result queue",
+                        );
                     }
                 },
                 PipelineMessage::SetReference => match image_grabbing_queue.recv() {
                     Err(error) => {
-                        eprint!("receiver error (Pipeline thread, image_grabbing_queue) {error}")
+                        eprintln!("receiver error (Pipeline thread, image_grabbing_queue) {error}")
                     }
                     Ok(result) => {
                         reference_image = match result.data {
                             Ok(image_data) => Ok(image_data),
                             Err(error) => {
-                                eprint!(
+                                eprintln!(
                                     "receiver error (Pipeline thread, image_grabbing_queue. Could not set reference image.) {error}"
                                 );
                                 //return current reference image
@@ -204,10 +198,10 @@ fn window_thread(
             Ok(result) => match result {
                 Ok(mat) => highgui::imshow(window, &mat)?,
                 Err(error) => {
-                    eprint!("Window thread reuslt_queue. Received frame is error {error}")
+                    eprintln!("Window thread reuslt_queue. Received frame is error {error}")
                 }
             },
-            Err(error) => eprint!(
+            Err(error) => eprintln!(
                 "Receiver error(Window thread, result_queue. COuld not receive frame {error})"
             ),
         }
@@ -258,7 +252,23 @@ fn main() -> Result<()> {
             image_receiver,
             pipeline_control_receiver,
             result_sender,
-            |img, ref_img| (img - ref_img).into_result(),
+            |img, ref_img| {
+                let mut res = Mat::default();
+                let _ = absdiff(&img, &ref_img, &mut res);
+
+                let mut channels: Vector<Mat> = Vector::default();
+                let _ = split(&res, &mut channels);
+                let num_channels = channels.len();
+
+                let init = channels.get(0);
+                let acc = channels
+                    .iter()
+                    .skip(1)
+                    .fold(init, |acc, m| (acc? + (m)).into_result()?.to_mat());
+                let acc_res = acc?;
+
+                greater_than_mat_f64(&acc_res, (num_channels as f64) * 50_f64)
+            },
         )
     });
     let window_handle =
