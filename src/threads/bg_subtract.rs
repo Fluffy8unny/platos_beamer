@@ -1,29 +1,19 @@
 use opencv::Result;
-use opencv::core::MatExpr;
 use opencv::prelude::*;
 
 use std::sync::mpsc::{Receiver, SyncSender};
 
+use crate::bg_subtract::BackgroundSubtractor;
 use crate::threads::try_sending;
 use crate::types::thread_types::*;
 
 fn compute_resulting_image(
     image: CameraResult,
-    reference: &Result<Mat>,
-    compute_fn: fn(Mat, Mat) -> Result<MatExpr>,
+    subtractor: &mut Box<dyn BackgroundSubtractor>,
 ) -> Result<Mat> {
     let input_image = image.data?;
-    let reference_image = match reference {
-        Ok(res) => res.clone(),
-        Err(_) => {
-            return Err(opencv::Error {
-                code: 1,
-                message: "Reference image not set".to_string(),
-            });
-        }
-    };
     println!("{:?}", image.timestamp);
-    let res = compute_fn(input_image, reference_image);
+    let res = subtractor.apply(input_image);
 
     match res {
         Ok(res) => res.to_mat(),
@@ -39,12 +29,9 @@ pub fn bg_subtract_pipeline(
     image_grabbing_queue: Receiver<CameraResult>,
     pipeline_control_queue: Receiver<PipelineMessage>,
     result_queue: SyncSender<Result<Mat>>,
-    compute_fn: fn(Mat, Mat) -> Result<MatExpr>,
+    bg_subtractor: Box<dyn BackgroundSubtractor>,
 ) -> Result<()> {
-    let mut reference_image: Result<Mat> = Err(opencv::Error {
-        code: 1,
-        message: "Reference image not set yet".to_string(),
-    });
+    let mut subtractor = bg_subtractor;
     loop {
         //always query an image
         try_sending(
@@ -75,8 +62,7 @@ pub fn bg_subtract_pipeline(
                         eprintln!("receiver error (Pipeline thread, image_grabbing_queue) {error}")
                     }
                     Ok(result) => {
-                        let output_image =
-                            compute_resulting_image(result, &reference_image, compute_fn);
+                        let output_image = compute_resulting_image(result, &mut subtractor);
                         try_sending(
                             &result_queue,
                             output_image,
@@ -90,15 +76,12 @@ pub fn bg_subtract_pipeline(
                         eprintln!("receiver error (Pipeline thread, image_grabbing_queue) {error}")
                     }
                     Ok(result) => {
-                        reference_image = match result.data {
-                            Ok(image_data) => Ok(image_data),
-                            Err(error) => {
-                                eprintln!(
-                                    "receiver error (Pipeline thread, image_grabbing_queue. Could not set reference image.) {error}"
-                                );
-                                //return current reference image
-                                reference_image
-                            }
+                        match result.data {
+                            Ok(image_data) => subtractor.reset(image_data),
+                            Err(error) => eprintln!(
+                                "receiver error (Pipeline thread, image_grabbing_queue. Could not set reference image.) {error}"
+                            ),
+                            //return current reference image
                         }
                     }
                 },
