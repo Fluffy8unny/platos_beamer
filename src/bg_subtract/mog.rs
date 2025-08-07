@@ -21,7 +21,7 @@ impl MogSettings {
             history: 250,
             mixtures: 5,
             background_ratio: 0.8,
-            noise_sigma: 3.6,
+            noise_sigma: 0.6,
             learning_rate: 0.0,
         }
     }
@@ -67,6 +67,8 @@ impl BackgroundSubtractor for MogSubtractor {
     fn reset(&mut self, _background_img: Mat) {
         if let Ok(subtractor) = mog_from_settings(self.settings) {
             self.subtractor = subtractor;
+        } else {
+            eprint!("could not reset mog background subtractor");
         }
     }
 }

@@ -14,7 +14,7 @@ pub fn display_window_thread(
     let window = "platos beamer";
     highgui::named_window(window, highgui::WINDOW_AUTOSIZE)?;
 
-    //init pipeline
+    //init pipeline, so defaults will be available
     try_sending(
         &pipeline_control_queue,
         PipelineMessage::SetReference,
@@ -23,12 +23,15 @@ pub fn display_window_thread(
     );
 
     loop {
+        //ask for image every frame. This way it'll be ready asap,
+        //since we inited b4 the loop.
         try_sending(
             &pipeline_control_queue,
             PipelineMessage::GenerateImage,
             "window thread",
             "pipeline_control_queue",
         );
+
         match result_queue.recv() {
             Ok(result) => match result {
                 Ok(mat) => highgui::imshow(window, &mat)?,

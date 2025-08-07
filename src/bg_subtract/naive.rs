@@ -4,11 +4,24 @@ use opencv::prelude::*;
 
 use crate::bg_subtract::BackgroundSubtractor;
 
-pub struct NaiveSubtractor {
-    pub background_approximation: Mat,
+pub struct NaiveSettings {
+    threshold_per_channel: f64,
 }
 
-fn naive_background_removal(img: Mat, ref_img: Mat) -> Result<MatExpr> {
+impl NaiveSettings {
+    pub fn default() -> NaiveSettings {
+        NaiveSettings {
+            threshold_per_channel: 50_f64,
+        }
+    }
+}
+
+pub struct NaiveSubtractor {
+    pub background_approximation: Mat,
+    pub settings: NaiveSettings,
+}
+
+fn naive_background_removal(img: Mat, ref_img: Mat, threshold: f64) -> Result<MatExpr> {
     let mut res = Mat::default();
     let _ = absdiff(&img, &ref_img, &mut res);
 
@@ -22,12 +35,25 @@ fn naive_background_removal(img: Mat, ref_img: Mat) -> Result<MatExpr> {
         .fold(init, |acc, m| (acc? + (m)).into_result()?.to_mat());
     let acc_res = acc?;
 
-    greater_than_mat_f64(&acc_res, 100_f64)
+    greater_than_mat_f64(&acc_res, threshold)
+}
+
+impl NaiveSubtractor {
+    pub fn new(settings: NaiveSettings) -> NaiveSubtractor {
+        NaiveSubtractor {
+            background_approximation: (Mat::default()),
+            settings,
+        }
+    }
 }
 
 impl BackgroundSubtractor for NaiveSubtractor {
     fn apply(&mut self, input_img: Mat) -> Result<MatExpr> {
-        naive_background_removal(input_img, self.background_approximation.clone())
+        naive_background_removal(
+            input_img,
+            self.background_approximation.clone(),
+            self.settings.threshold_per_channel,
+        )
     }
 
     fn reset(&mut self, background_img: Mat) {

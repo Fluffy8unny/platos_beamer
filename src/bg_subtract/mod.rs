@@ -4,4 +4,9 @@ mod naive;
 
 pub use bg_trait::BackgroundSubtractor;
 pub use mog::{MogSettings, MogSubtractor};
-pub use naive::NaiveSubtractor;
+pub use naive::{NaiveSettings, NaiveSubtractor};
+
+pub enum SubtractorType {
+    Naive,
+    Mog,
+}
