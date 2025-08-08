@@ -75,15 +75,12 @@ pub fn bg_subtract_pipeline(
                     Err(error) => {
                         eprintln!("receiver error (Pipeline thread, image_grabbing_queue) {error}")
                     }
-                    Ok(result) => {
-                        match result.data {
-                            Ok(image_data) => subtractor.reset(image_data),
-                            Err(error) => eprintln!(
-                                "receiver error (Pipeline thread, image_grabbing_queue. Could not set reference image.) {error}"
-                            ),
-                            //return current reference image
-                        }
-                    }
+                    Ok(result) => match result.data {
+                        Ok(image_data) => subtractor.reset(image_data),
+                        Err(error) => eprintln!(
+                            "receiver error (Pipeline thread, image_grabbing_queue. Could not set reference image.) {error}"
+                        ),
+                    },
                 },
             },
             Err(error) => {

@@ -6,11 +6,11 @@ use crate::bg_subtract::{
     BackgroundSubtractor, MogSettings, MogSubtractor, NaiveSettings, NaiveSubtractor,
     SubtractorType,
 };
-use crate::threads::{bg_subtract_pipeline, camera_thread, display_window_thread};
+use crate::threads::{bg_subtract_pipeline, camera_thread, display_window_thread, validate_camera};
 use crate::types::thread_types::{CameraMessage, CameraResult, PipelineMessage};
 
-use opencv::Result;
 use opencv::prelude::*;
+use opencv::{Error, Result};
 
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread;
@@ -30,6 +30,11 @@ fn create_bg_selector(selected_type: SubtractorType) -> Result<Box<dyn Backgroun
 fn main() -> Result<()> {
     let camera_index = 0;
     let selected_type = SubtractorType::Mog;
+
+    if validate_camera(camera_index).is_err() {
+        eprintln!("could not find camera at device idx {}", camera_index);
+        return Err(Error::new(2, "could not open camera"));
+    }
 
     let (image_sender, image_receiver): (SyncSender<CameraResult>, Receiver<CameraResult>) =
         sync_channel(1);
@@ -59,7 +64,6 @@ fn main() -> Result<()> {
 
     let window_handle =
         thread::spawn(move || display_window_thread(pipeline_control_sender, result_receiver));
-
     [window_handle, pipeline_handle, grab_handle].map(|t| {
         let _res = t.join().unwrap();
     });
