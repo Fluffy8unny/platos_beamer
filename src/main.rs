@@ -37,7 +37,7 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
     if validate_camera(camera_index).is_err() {
         eprintln!("could not find camera at device idx {}", camera_index);
-        return Err(Error::new(2, "could not open camera"));
+        return Err(Box::new(Error::new(2, "could not open camera")));
     }
 
     let (image_sender, image_receiver): (SyncSender<CameraResult>, Receiver<CameraResult>) =
