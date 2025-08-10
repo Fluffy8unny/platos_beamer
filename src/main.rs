@@ -1,4 +1,5 @@
 mod bg_subtract;
+mod config;
 mod threads;
 mod types;
 
@@ -6,6 +7,7 @@ use crate::bg_subtract::{
     BackgroundSubtractor, MogSettings, MogSubtractor, NaiveSettings, NaiveSubtractor,
     SubtractorType,
 };
+use crate::config::{PlatoConfig, load_config};
 use crate::threads::{bg_subtract_pipeline, camera_thread, display_window_thread, validate_camera};
 use crate::types::thread_types::{CameraMessage, CameraResult, PipelineMessage};
 
@@ -27,9 +29,11 @@ fn create_bg_selector(selected_type: SubtractorType) -> Result<Box<dyn Backgroun
     })
 }
 
-fn main() -> Result<()> {
-    let camera_index = 0;
-    let selected_type = SubtractorType::Mog;
+fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    let config = load_config("config.toml")?;
+    let camera_index = config.camera_config.device_index;
+    print!("{:?}", camera_index);
+    let selected_type = config.background_subtractor_config.subtractor_type;
 
     if validate_camera(camera_index).is_err() {
         eprintln!("could not find camera at device idx {}", camera_index);
