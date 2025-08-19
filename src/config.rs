@@ -19,7 +19,13 @@ pub struct PlatoConfig {
 }
 
 pub fn load_config(path: &str) -> Result<PlatoConfig, Box<dyn std::error::Error>> {
-    let contents = std::fs::read_to_string(path)?;
+    let contents = match std::fs::read_to_string(path) {
+        Ok(res) => res,
+        Err(e) => {
+            eprintln!("Could not load config at {}. Terminating.", path);
+            return Err(Box::new(e));
+        }
+    };
     let config: PlatoConfig = toml::from_str(&contents)?;
     Ok(config)
 }
