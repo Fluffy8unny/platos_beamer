@@ -1,5 +1,12 @@
 use opencv::Result;
 use opencv::core::{Mat, MatExpr};
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+pub enum SubtractorType {
+    Naive,
+    Mog,
+}
 
 pub trait BackgroundSubtractor {
     fn apply(&mut self, input_img: Mat) -> Result<MatExpr>;

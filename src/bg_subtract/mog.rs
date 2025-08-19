@@ -4,7 +4,7 @@ use opencv::core::greater_than_mat_f64;
 use opencv::core::{Mat, MatExpr, Ptr};
 use opencv::prelude::*;
 
-use crate::bg_subtract::BackgroundSubtractor;
+use crate::types::BackgroundSubtractor;
 
 #[derive(Debug, Clone, Copy)]
 pub struct MogSettings {

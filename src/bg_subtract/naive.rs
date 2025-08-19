@@ -2,7 +2,7 @@ use opencv::Result;
 use opencv::core::{Mat, MatExpr, Vector, absdiff, greater_than_mat_f64, split};
 use opencv::prelude::*;
 
-use crate::bg_subtract::BackgroundSubtractor;
+use crate::types::BackgroundSubtractor;
 
 pub struct NaiveSettings {
     threshold_per_channel: f64,

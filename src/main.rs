@@ -3,14 +3,13 @@ mod config;
 mod threads;
 mod types;
 
-use crate::bg_subtract::{
-    BackgroundSubtractor, MogSettings, MogSubtractor, NaiveSettings, NaiveSubtractor,
-    SubtractorType,
-};
-use crate::config::{PlatoConfig, load_config};
+use crate::bg_subtract::{MogSettings, MogSubtractor, NaiveSettings, NaiveSubtractor};
+use crate::config::load_config;
 use crate::threads::{bg_subtract_pipeline, camera_thread, display_window_thread, validate_camera};
-use crate::types::thread_types::{CameraMessage, CameraResult, PipelineMessage};
 
+use crate::types::{
+    BackgroundSubtractor, CameraMessage, CameraResult, PipelineMessage, SubtractorType,
+};
 use opencv::prelude::*;
 use opencv::{Error, Result};
 

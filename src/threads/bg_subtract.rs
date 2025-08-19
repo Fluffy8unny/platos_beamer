@@ -3,8 +3,8 @@ use opencv::prelude::*;
 
 use std::sync::mpsc::{Receiver, SyncSender};
 
-use crate::bg_subtract::BackgroundSubtractor;
 use crate::threads::try_sending;
+use crate::types::BackgroundSubtractor;
 use crate::types::thread_types::*;
 
 fn compute_resulting_image(
