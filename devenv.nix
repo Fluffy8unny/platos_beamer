@@ -10,9 +10,11 @@
     pkgs.gtk3
     (pkgs.opencv.override{ enableGtk3 = true; })
     pkgs.libclang
+    pkgs.libxkbcommon
   ];
 
   git-hooks.hooks.clippy.enable = true;
   git-hooks.hooks.rustfmt.enable = true;
   env.LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
+  env.LD_LIBRARY_PATH="${pkgs.libxkbcommon}/lib";
 }

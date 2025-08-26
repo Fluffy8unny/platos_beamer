@@ -1,12 +1,13 @@
 mod bg_subtract;
 mod config;
+mod display;
 mod threads;
 mod types;
 
 use crate::bg_subtract::{MogSettings, MogSubtractor, NaiveSettings, NaiveSubtractor};
 use crate::config::load_config;
-use crate::threads::{bg_subtract_pipeline, camera_thread, display_window_thread, validate_camera};
-
+use crate::display::start_display;
+use crate::threads::{bg_subtract_pipeline, camera_thread, validate_camera};
 use crate::types::{
     BackgroundSubtractor, CameraMessage, CameraResult, PipelineMessage, SubtractorType,
 };
@@ -65,10 +66,14 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         )
     });
 
-    let window_handle =
-        thread::spawn(move || display_window_thread(pipeline_control_sender, result_receiver));
-    [window_handle, pipeline_handle, grab_handle].map(|t| {
-        let _res = t.join().unwrap();
-    });
+    match (start_display(pipeline_control_sender, result_receiver)) {
+        Ok(_) => {
+            println!("shutting down other threads gracefully:");
+            [pipeline_handle, grab_handle].map(|t| {
+                let _res = t.join().unwrap();
+            });
+        }
+        Err(err) => eprint!("everything is fucked {}", err),
+    };
     Ok(())
 }
