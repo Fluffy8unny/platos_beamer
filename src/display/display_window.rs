@@ -1,3 +1,4 @@
+use glium::Surface;
 use opencv::Result;
 use opencv::prelude::*;
 
@@ -15,14 +16,15 @@ use glium::winit;
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
 use winit::event::{ElementState, KeyEvent};
-use winit::event_loop::{ActiveEventLoop, EventLoop};
+use winit::event_loop::ActiveEventLoop;
 use winit::keyboard::Key;
 use winit::platform::pump_events::{EventLoopExtPumpEvents, PumpStatus};
 use winit::window::{Window, WindowId};
-
+pub type DisplayType = glium::Display<glium::glutin::surface::WindowSurface>;
 struct PlatoApp {
     pipeline_control_queue: SyncSender<PipelineMessage>,
     window: Option<Window>,
+    display: Option<DisplayType>,
 }
 
 fn send_pipeline_msg(pipeline_control_queue: &SyncSender<PipelineMessage>, msg: PipelineMessage) {
@@ -35,12 +37,7 @@ fn send_pipeline_msg(pipeline_control_queue: &SyncSender<PipelineMessage>, msg: 
 }
 
 impl ApplicationHandler for PlatoApp {
-    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        //let window_attributes = Window::default_attributes().with_title("A fantastic window!");
-        let (window, display) =
-            glium::backend::glutin::SimpleWindowBuilder::new().build(event_loop);
-        self.window = Some(window);
-    }
+    fn resumed(&mut self, event_loop: &ActiveEventLoop) {}
 
     fn window_event(
         &mut self,
@@ -90,10 +87,13 @@ pub fn start_display(
     //init pipeline, so defaults will be available
     send_pipeline_msg(&pipeline_control_queue, PipelineMessage::SetReference);
 
-    let mut event_loop = EventLoop::new().unwrap();
+    let mut event_loop = winit::event_loop::EventLoopBuilder::new().build().unwrap();
+    //let window_attributes = Window::default_attributes().with_title("A fantastic window!");
+    let (window, display) = glium::backend::glutin::SimpleWindowBuilder::new().build(&event_loop);
     let mut app = PlatoApp {
         pipeline_control_queue: pipeline_control_queue.clone(),
-        window: None,
+        window: Some(window),
+        display: Some(display),
     };
     let timeout = Some(Duration::ZERO);
     loop {
@@ -109,7 +109,11 @@ pub fn start_display(
         //check if we got updates from the camera
         match result_queue.recv() {
             Ok(result) => match result {
-                Ok(mat) => println!("got new image"),
+                Ok(mat) => {
+                    let mut frame = app.display.as_ref().unwrap().draw();
+                    frame.clear_color(1_f32, 1_f32, 1_f32, 1_f32);
+                    frame.finish();
+                }
                 Err(error) => {
                     eprintln!("Window thread reuslt_queue. Received frame is error {error}")
                 }
