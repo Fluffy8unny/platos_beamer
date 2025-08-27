@@ -11,6 +11,8 @@
     (pkgs.opencv.override{ enableGtk3 = true; })
     pkgs.libclang
     pkgs.libxkbcommon
+    pkgs.mesa
+    pkgs.libGL
   ];
 
   git-hooks.hooks.clippy.enable = true;

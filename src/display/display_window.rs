@@ -7,6 +7,11 @@ use crate::types::thread_types::*;
 use std::sync::mpsc::{Receiver, SyncSender};
 use std::time::Duration;
 
+extern crate glium;
+// Use the re-exported winit dependency to avoid version mismatches.
+// Requires the `simple_window_builder` feature.
+use glium::winit;
+
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
 use winit::event::{ElementState, KeyEvent};
@@ -31,8 +36,10 @@ fn send_pipeline_msg(pipeline_control_queue: &SyncSender<PipelineMessage>, msg: 
 
 impl ApplicationHandler for PlatoApp {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        let window_attributes = Window::default_attributes().with_title("A fantastic window!");
-        self.window = Some(event_loop.create_window(window_attributes).unwrap());
+        //let window_attributes = Window::default_attributes().with_title("A fantastic window!");
+        let (window, display) =
+            glium::backend::glutin::SimpleWindowBuilder::new().build(event_loop);
+        self.window = Some(window);
     }
 
     fn window_event(
