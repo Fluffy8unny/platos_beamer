@@ -1,5 +1,6 @@
 use crate::types::SubtractorType;
 use serde::Deserialize;
+use serde::de::DeserializeOwned;
 use toml;
 
 #[derive(Deserialize)]
@@ -18,14 +19,24 @@ pub struct PlatoConfig {
     pub background_subtractor_config: BgSubConfig,
 }
 
-pub fn load_config(path: &str) -> Result<PlatoConfig, Box<dyn std::error::Error>> {
-    let contents = match std::fs::read_to_string(path) {
-        Ok(res) => res,
+#[derive(Deserialize)]
+pub struct ShaderConfig {
+    pub name: String,
+    pub vertex: String,
+    pub fragment: String,
+}
+
+fn open_file(path: &str) -> Result<String, Box<dyn std::error::Error>> {
+    match std::fs::read_to_string(path) {
+        Ok(res) => Ok(res),
         Err(e) => {
             eprintln!("Could not load config at {}. Terminating.", path);
             return Err(Box::new(e));
         }
-    };
-    let config: PlatoConfig = toml::from_str(&contents)?;
-    Ok(config)
+    }
+}
+
+pub fn load_config<T: DeserializeOwned>(path: &str) -> Result<T, Box<dyn std::error::Error>> {
+    let contents = open_file(path)?;
+    Ok(toml::from_str(&contents)?)
 }

@@ -1,7 +1,8 @@
 use glium::Surface;
-use opencv::Result;
 use opencv::prelude::*;
+//use opencv::Result;
 
+use crate::display::minimap::create_minimap;
 use crate::threads::try_sending;
 use crate::types::thread_types::*;
 
@@ -20,7 +21,9 @@ use winit::event_loop::ActiveEventLoop;
 use winit::keyboard::Key;
 use winit::platform::pump_events::{EventLoopExtPumpEvents, PumpStatus};
 use winit::window::{Window, WindowId};
+
 pub type DisplayType = glium::Display<glium::glutin::surface::WindowSurface>;
+
 struct PlatoApp {
     pipeline_control_queue: SyncSender<PipelineMessage>,
     window: Option<Window>,
@@ -80,14 +83,18 @@ impl ApplicationHandler for PlatoApp {
     }
 }
 
+pub fn clear_frame(frame: &mut glium::Frame) {
+    frame.clear_color(1_f32, 0_f32, 1_f32, 1_f32);
+}
+
 pub fn start_display(
     pipeline_control_queue: SyncSender<PipelineMessage>,
-    result_queue: Receiver<Result<Mat>>,
-) -> Result<()> {
+    result_queue: Receiver<opencv::Result<Mat>>,
+) -> Result<(), Box<dyn std::error::Error>> {
     //init pipeline, so defaults will be available
     send_pipeline_msg(&pipeline_control_queue, PipelineMessage::SetReference);
 
-    let mut event_loop = winit::event_loop::EventLoopBuilder::new().build().unwrap();
+    let mut event_loop = winit::event_loop::EventLoop::builder().build().unwrap();
     //let window_attributes = Window::default_attributes().with_title("A fantastic window!");
     let (window, display) = glium::backend::glutin::SimpleWindowBuilder::new().build(&event_loop);
     let mut app = PlatoApp {
@@ -96,23 +103,23 @@ pub fn start_display(
         display: Some(display),
     };
     let timeout = Some(Duration::ZERO);
+    let mut minimap = create_minimap(app.display.as_ref().ok_or("Could not create Minimap")?)?;
+
     loop {
         //ask for image every frame. This way it'll be ready asap,
         //since we inited b4 the loop.
-        try_sending(
-            &pipeline_control_queue,
-            PipelineMessage::GenerateImage,
-            "window thread",
-            "pipeline_control_queue",
-        );
-
+        send_pipeline_msg(&pipeline_control_queue, PipelineMessage::GenerateImage);
+        let mut frame = app.display.as_ref().unwrap().draw();
         //check if we got updates from the camera
         match result_queue.recv() {
             Ok(result) => match result {
                 Ok(mat) => {
-                    let mut frame = app.display.as_ref().unwrap().draw();
-                    frame.clear_color(1_f32, 1_f32, 1_f32, 1_f32);
-                    frame.finish();
+                    minimap.update_texture(
+                        &mat,
+                        app.display
+                            .as_ref()
+                            .ok_or("could not get display reference")?,
+                    )?;
                 }
                 Err(error) => {
                     eprintln!("Window thread reuslt_queue. Received frame is error {error}")
@@ -130,5 +137,8 @@ pub fn start_display(
             println!("Quitting window gracefully with exit code {:?}", exit_code);
             return Ok(());
         }
+        clear_frame(&mut frame);
+        minimap.draw(&mut frame)?;
+        frame.finish()?;
     }
 }
