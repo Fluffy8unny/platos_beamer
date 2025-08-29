@@ -2,7 +2,7 @@ use opencv::Result;
 use opencv::core::{Mat, MatExpr};
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub enum SubtractorType {
     Naive,
     Mog,

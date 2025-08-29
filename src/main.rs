@@ -33,7 +33,7 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let config: PlatoConfig = load_config("config.toml")?;
     let camera_index = config.camera_config.device_index;
     print!("{:?}", camera_index);
-    let selected_type = config.background_subtractor_config.subtractor_type;
+    let selected_type = config.background_subtractor_config.subtractor_type.clone();
 
     if validate_camera(camera_index).is_err() {
         eprintln!("could not find camera at device idx {}", camera_index);
@@ -66,7 +66,7 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         )
     });
 
-    match (start_display(pipeline_control_sender, result_receiver)) {
+    match start_display(pipeline_control_sender, result_receiver, config.clone()) {
         Ok(_) => {
             println!("shutting down other threads gracefully:");
             [pipeline_handle, grab_handle].map(|t| {

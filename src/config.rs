@@ -3,20 +3,35 @@ use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use toml;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct CameraConfig {
     pub device_index: i32,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct BgSubConfig {
     pub subtractor_type: SubtractorType,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
+pub struct MinimapConfig {
+    pub show: bool,
+    pub position: (f32, f32),
+    pub dims: (f32, f32),
+}
+
+#[derive(Deserialize, Clone)]
+pub struct KeyConfig {
+    pub quit_key: String,
+    pub reset_key: String,
+}
+
+#[derive(Deserialize, Clone)]
 pub struct PlatoConfig {
     pub camera_config: CameraConfig,
     pub background_subtractor_config: BgSubConfig,
+    pub minimap_config: MinimapConfig,
+    pub key_config: KeyConfig,
 }
 
 #[derive(Deserialize)]

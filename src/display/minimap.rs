@@ -1,7 +1,7 @@
 use std::error::Error;
 
 use crate::{
-    config::{ShaderConfig, load_config},
+    config::{PlatoConfig, ShaderConfig, load_config},
     display::{
         display_window::DisplayType,
         primitves::{QUAD_INDICES, Vertex, get_quad_buffer},
@@ -73,8 +73,12 @@ fn load_shaders(display: &DisplayType) -> Result<glium::Program, Box<dyn std::er
     )?)
 }
 
-fn get_buffers(display: &DisplayType) -> Result<BufferCollection, Box<dyn std::error::Error>> {
-    let verticies = get_quad_buffer((0.5, 1.0), (0.5, 0.8));
+fn get_buffers(
+    display: &DisplayType,
+    pos: (f32, f32),
+    dims: (f32, f32),
+) -> Result<BufferCollection, Box<dyn std::error::Error>> {
+    let verticies = get_quad_buffer((pos.0, pos.0 + dims.0), (pos.1, pos.1 + dims.1));
     let vertex_buffer = glium::VertexBuffer::new(display, &verticies)?;
     let index_buffer = glium::IndexBuffer::new(
         display,
@@ -87,10 +91,17 @@ fn get_buffers(display: &DisplayType) -> Result<BufferCollection, Box<dyn std::e
     })
 }
 
-pub fn create_minimap(display: &DisplayType) -> Result<Minimap, Box<dyn std::error::Error>> {
+pub fn create_minimap(
+    display: &DisplayType,
+    config: &PlatoConfig,
+) -> Result<Minimap, Box<dyn std::error::Error>> {
     let default_texture = get_texture_from_image(&get_empty_minimap(), display)?;
     Ok(Minimap {
-        buffers: get_buffers(display)?,
+        buffers: get_buffers(
+            display,
+            config.minimap_config.position,
+            config.minimap_config.dims,
+        )?,
         texture: default_texture,
         program: load_shaders(display)?,
     })

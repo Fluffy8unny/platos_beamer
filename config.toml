@@ -3,3 +3,12 @@ device_index=0
 
 ["background_subtractor_config"]
 subtractor_type = "Mog"
+
+["minimap_config"]
+show = true
+position = [0.4,0.4]
+dims     = [0.5,0.5]
+
+["key_config"]
+quit_key = "q"
+reset_key = "r"

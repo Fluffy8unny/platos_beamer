@@ -1,10 +1,10 @@
 use glium::Surface;
 use opencv::prelude::*;
 
+use crate::PlatoConfig;
 use crate::display::minimap::create_minimap;
 use crate::threads::try_sending;
 use crate::types::thread_types::*;
-
 use std::sync::mpsc::{Receiver, SyncSender};
 use std::time::Duration;
 
@@ -27,12 +27,14 @@ struct PlatoApp {
     pipeline_control_queue: SyncSender<PipelineMessage>,
     window: Window,
     display: DisplayType,
+    config: PlatoConfig,
 }
 
 impl PlatoApp {
     fn new(
         pipeline_control_queue: SyncSender<PipelineMessage>,
         event_loop: &EventLoop<()>,
+        config: PlatoConfig,
     ) -> PlatoApp {
         let (window, display) =
             glium::backend::glutin::SimpleWindowBuilder::new().build(event_loop);
@@ -40,6 +42,7 @@ impl PlatoApp {
             pipeline_control_queue: pipeline_control_queue.clone(),
             window,
             display,
+            config,
         }
     }
 }
@@ -78,11 +81,11 @@ impl ApplicationHandler for PlatoApp {
                     },
                 ..
             } => match key.as_ref() {
-                Key::Character("Q") => {
+                Key::Character(val) if val == self.config.key_config.quit_key => {
                     send_pipeline_msg(&self.pipeline_control_queue, PipelineMessage::Quit);
                     event_loop.exit();
                 }
-                Key::Character("R") => {
+                Key::Character(val) if val == self.config.key_config.reset_key => {
                     send_pipeline_msg(&self.pipeline_control_queue, PipelineMessage::SetReference);
                 }
                 _ => (),
@@ -99,11 +102,12 @@ pub fn clear_frame(frame: &mut glium::Frame) {
 pub fn start_display(
     pipeline_control_queue: SyncSender<PipelineMessage>,
     result_queue: Receiver<opencv::Result<Mat>>,
+    config: PlatoConfig,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut event_loop = winit::event_loop::EventLoop::builder().build().unwrap();
-    let mut app = PlatoApp::new(pipeline_control_queue.clone(), &event_loop);
+    let mut app = PlatoApp::new(pipeline_control_queue.clone(), &event_loop, config.clone());
     let timeout = Some(Duration::ZERO);
-    let mut minimap = create_minimap(&app.display)?;
+    let mut minimap = create_minimap(&app.display, &config)?;
 
     //init pipeline, so defaults will be available
     send_pipeline_msg(&pipeline_control_queue, PipelineMessage::SetReference);
