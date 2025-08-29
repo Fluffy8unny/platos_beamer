@@ -3,4 +3,3 @@ mod minimap;
 pub mod primitves;
 
 pub use display_window::start_display;
-pub use primitves::Vertex;

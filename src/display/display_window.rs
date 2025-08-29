@@ -133,7 +133,9 @@ pub fn start_display(
 
         let mut frame = app.display.draw();
         clear_frame(&mut frame);
-        minimap.draw(&mut frame)?;
+        if config.minimap_config.show {
+            minimap.draw(&mut frame)?;
+        }
         //draw game
         frame.finish()?;
 

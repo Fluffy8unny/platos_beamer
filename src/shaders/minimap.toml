@@ -21,6 +21,11 @@ fragment="""
       
       void main(){ 
          float val = texture(tex, uv_coords).x;   
-         color =  vec4(val,val,val,1.0);
+         const float border = 0.01;
+         if (uv_coords.x < border  || uv_coords.x >= 1.0 - border || uv_coords.y < border || uv_coords.y >= 1.0-border){
+           color =  vec4(1.0,1.0,1.0,1.0);
+         }else{
+           color =  vec4(val,val,val,1.0);
+         }
       }
       """

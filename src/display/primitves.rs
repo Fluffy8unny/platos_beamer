@@ -31,8 +31,3 @@ pub fn get_quad_buffer(x_size: (f32, f32), y_size: (f32, f32)) -> [Vertex; 4] {
 }
 
 pub const QUAD_INDICES: [u16; 6] = [0, 1, 2, 0, 2, 3];
-
-pub struct BufferCollection {
-    pub vertex_buffer: glium::VertexBuffer<Vertex>,
-    pub index_buffer: glium::IndexBuffer<u16>,
-}
