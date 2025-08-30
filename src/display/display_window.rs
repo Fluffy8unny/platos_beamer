@@ -4,7 +4,7 @@ use crate::PlatoConfig;
 use crate::display::minimap::Minimap;
 use crate::threads::try_sending;
 use crate::types::{GameTrait, thread_types::*};
-use std::sync::mpsc::{Receiver, SyncSender};
+use std::sync::mpsc::{Receiver, SyncSender, TryRecvError};
 use std::time::Duration;
 
 extern crate glium;
@@ -157,29 +157,40 @@ pub fn start_display(
         config.clone(),
     )?;
 
+    //the camera is way slower than the actual renderer. We shouldn't call render, until we
+    //actually got a real image, and are sure everything is updated. In theory this could be
+    //handled by Optionals and exceptions, but this way is easier and more natural
+    let mut got_image = false;
+
     //init pipeline, so defaults will be available
     send_pipeline_msg(&pipeline_control_queue, PipelineMessage::SetReference);
-
+    send_pipeline_msg(&pipeline_control_queue, PipelineMessage::GenerateImage);
     loop {
-        //ask for image every frame. This way it'll be ready asap,
-        //since we inited b4 the loop.
-        send_pipeline_msg(&pipeline_control_queue, PipelineMessage::GenerateImage);
-        //check if we got updates from the camera
-        match result_queue.recv() {
-            Ok(result) => match result {
-                Ok(mask) => {
-                    app.update(mask)?;
+        match result_queue.try_recv() {
+            Ok(result) => {
+                send_pipeline_msg(&pipeline_control_queue, PipelineMessage::GenerateImage);
+                match result {
+                    Ok(mask) => {
+                        got_image = true;
+                        app.update(mask)?;
+                    }
+                    Err(error) => {
+                        eprintln!("Window thread reuslt_queue. Received frame is error {error}")
+                    }
                 }
-                Err(error) => {
-                    eprintln!("Window thread reuslt_queue. Received frame is error {error}")
-                }
+            }
+            Err(error) => match error {
+                TryRecvError::Empty => (),
+                TryRecvError::Disconnected => eprint!(
+                    "Receiver error(Window thread, result_queue. COuld not receive frame {error}"
+                ),
             },
-            Err(error) => eprintln!(
-                "Receiver error(Window thread, result_queue. COuld not receive frame {error})"
-            ),
         }
+
         //draw everything and swap buffers
-        app.draw()?;
+        if got_image {
+            app.draw()?;
+        }
 
         //handle window events
         let status = event_loop.pump_app_events(Some(Duration::ZERO), &mut app);
