@@ -107,7 +107,7 @@ impl ApplicationHandler for PlatoApp {
             ..
         } = &event
         {
-            self.game.key_event(&logical_key);
+            self.game.key_event(logical_key);
         }
 
         match &event {
@@ -182,7 +182,7 @@ pub fn start_display(
             Err(error) => match error {
                 TryRecvError::Empty => (),
                 TryRecvError::Disconnected => eprint!(
-                    "Receiver error(Window thread, result_queue. COuld not receive frame {error}"
+                    "Receiver error(Window thread, result_queue. Could not receive frame {error}"
                 ),
             },
         }

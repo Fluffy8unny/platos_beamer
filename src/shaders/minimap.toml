@@ -22,7 +22,7 @@ fragment="""
       uniform sampler2D tex;
       
       void main(){ 
-         float val = texture(tex, uv_coords).x;   
+         float val = texture(tex, vec2(uv_coords.x, uv_coords.y)).x;   
          const float border = 0.01;
          if (uv_coords.x < border  || uv_coords.x >= 1.0 - border || uv_coords.y < border || uv_coords.y >= 1.0-border){
            color =  vec4(1.0,1.0,1.0,1.0);
