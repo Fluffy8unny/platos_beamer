@@ -1,16 +1,19 @@
 mod bg_subtract;
 mod config;
 mod display;
+mod game;
 mod threads;
 mod types;
 
 use crate::bg_subtract::{MogSettings, MogSubtractor, NaiveSettings, NaiveSubtractor};
 use crate::config::{PlatoConfig, load_config};
 use crate::display::start_display;
+use crate::game::IdentityGame;
 use crate::threads::{bg_subtract_pipeline, camera_thread, validate_camera};
 use crate::types::{
     BackgroundSubtractor, CameraMessage, CameraResult, PipelineMessage, SubtractorType,
 };
+
 use opencv::prelude::*;
 use opencv::{Error, Result};
 
@@ -34,7 +37,7 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let camera_index = config.camera_config.device_index;
     print!("{:?}", camera_index);
     let selected_type = config.background_subtractor_config.subtractor_type.clone();
-
+    let test_game = Box::new(IdentityGame::new());
     if validate_camera(camera_index).is_err() {
         eprintln!("could not find camera at device idx {}", camera_index);
         return Err(Box::new(Error::new(2, "could not open camera")));
@@ -66,7 +69,12 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         )
     });
 
-    match start_display(pipeline_control_sender, result_receiver, config.clone()) {
+    match start_display(
+        pipeline_control_sender,
+        result_receiver,
+        test_game,
+        config.clone(),
+    ) {
         Ok(_) => {
             println!("shutting down other threads gracefully:");
             [pipeline_handle, grab_handle].map(|t| {

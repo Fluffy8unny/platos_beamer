@@ -1,14 +1,14 @@
-use glium::Surface;
 use opencv::prelude::*;
 
 use crate::PlatoConfig;
-use crate::display::minimap::create_minimap;
+use crate::display::minimap::Minimap;
 use crate::threads::try_sending;
-use crate::types::thread_types::*;
+use crate::types::{GameTrait, thread_types::*};
 use std::sync::mpsc::{Receiver, SyncSender};
 use std::time::Duration;
 
 extern crate glium;
+use glium::Surface;
 // Use the re-exported winit dependency to avoid version mismatches.
 // Requires the `simple_window_builder` feature.
 use glium::winit;
@@ -27,6 +27,8 @@ struct PlatoApp {
     pipeline_control_queue: SyncSender<PipelineMessage>,
     window: Window,
     display: DisplayType,
+    minimap: Minimap,
+    game: Box<dyn GameTrait>,
     config: PlatoConfig,
 }
 
@@ -34,16 +36,50 @@ impl PlatoApp {
     fn new(
         pipeline_control_queue: SyncSender<PipelineMessage>,
         event_loop: &EventLoop<()>,
+        game: Box<dyn GameTrait>,
         config: PlatoConfig,
-    ) -> PlatoApp {
+    ) -> Result<PlatoApp, Box<dyn std::error::Error>> {
         let (window, display) =
             glium::backend::glutin::SimpleWindowBuilder::new().build(event_loop);
-        PlatoApp {
+        let minimap = Minimap::new(&display, &config)?;
+        let mut app = PlatoApp {
             pipeline_control_queue: pipeline_control_queue.clone(),
             window,
             display,
+            minimap,
+            game,
             config,
+        };
+        app.init()?;
+        Ok(app)
+    }
+
+    fn init(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        //init game state
+        self.game.init(&self.display, self.config.clone())?;
+        Ok(())
+    }
+
+    fn reset(&mut self) {
+        self.game.reset();
+    }
+
+    fn update(&mut self, mask: Mat) -> Result<(), Box<dyn std::error::Error>> {
+        self.minimap.update_texture(&mask, &self.display)?;
+        self.game.update(&mask, &self.display)?;
+        Ok(())
+    }
+
+    fn draw(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let mut frame = self.display.draw();
+        clear_frame(&mut frame);
+        self.game.draw(&mut frame)?;
+        if self.config.minimap_config.show {
+            self.minimap.draw(&mut frame)?;
         }
+
+        frame.finish()?;
+        Ok(())
     }
 }
 
@@ -66,8 +102,15 @@ impl ApplicationHandler for PlatoApp {
         event: WindowEvent,
     ) {
         println!("{event:?}");
+        if let WindowEvent::KeyboardInput {
+            event: KeyEvent { logical_key, .. },
+            ..
+        } = &event
+        {
+            self.game.key_event(&logical_key);
+        }
 
-        match event {
+        match &event {
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::RedrawRequested => {
                 self.window.request_redraw();
@@ -87,6 +130,7 @@ impl ApplicationHandler for PlatoApp {
                 }
                 Key::Character(val) if val == self.config.key_config.reset_key => {
                     send_pipeline_msg(&self.pipeline_control_queue, PipelineMessage::SetReference);
+                    self.reset();
                 }
                 _ => (),
             },
@@ -102,15 +146,20 @@ pub fn clear_frame(frame: &mut glium::Frame) {
 pub fn start_display(
     pipeline_control_queue: SyncSender<PipelineMessage>,
     result_queue: Receiver<opencv::Result<Mat>>,
+    game: Box<dyn GameTrait>,
     config: PlatoConfig,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut event_loop = winit::event_loop::EventLoop::builder().build().unwrap();
-    let mut app = PlatoApp::new(pipeline_control_queue.clone(), &event_loop, config.clone());
-    let timeout = Some(Duration::ZERO);
-    let mut minimap = create_minimap(&app.display, &config)?;
+    let mut app = PlatoApp::new(
+        pipeline_control_queue.clone(),
+        &event_loop,
+        game,
+        config.clone(),
+    )?;
 
     //init pipeline, so defaults will be available
     send_pipeline_msg(&pipeline_control_queue, PipelineMessage::SetReference);
+
     loop {
         //ask for image every frame. This way it'll be ready asap,
         //since we inited b4 the loop.
@@ -118,9 +167,8 @@ pub fn start_display(
         //check if we got updates from the camera
         match result_queue.recv() {
             Ok(result) => match result {
-                Ok(mat) => {
-                    minimap.update_texture(&mat, &app.display)?;
-                    //update game state
+                Ok(mask) => {
+                    app.update(mask)?;
                 }
                 Err(error) => {
                     eprintln!("Window thread reuslt_queue. Received frame is error {error}")
@@ -130,19 +178,13 @@ pub fn start_display(
                 "Receiver error(Window thread, result_queue. COuld not receive frame {error})"
             ),
         }
-
-        let mut frame = app.display.draw();
-        clear_frame(&mut frame);
-        if config.minimap_config.show {
-            minimap.draw(&mut frame)?;
-        }
-        //draw game
-        frame.finish()?;
+        //draw everything and swap buffers
+        app.draw()?;
 
         //handle window events
-        let status = event_loop.pump_app_events(timeout, &mut app);
+        let status = event_loop.pump_app_events(Some(Duration::ZERO), &mut app);
 
-        //end this whole mess if we're told to do so. This has to be done AFTER \
+        //end this whole mess if we're told to do so. This has to be done AFTER
         //all frame stuff happend
         if let PumpStatus::Exit(exit_code) = status {
             send_pipeline_msg(&pipeline_control_queue, PipelineMessage::Quit);
