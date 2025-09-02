@@ -2,6 +2,7 @@ use opencv::Result;
 use opencv::prelude::*;
 
 use std::sync::mpsc::{Receiver, SyncSender};
+use std::time::SystemTime;
 
 use crate::threads::try_sending;
 use crate::types::BackgroundSubtractor;
@@ -28,7 +29,7 @@ pub fn bg_subtract_pipeline(
     camera_control_queue: SyncSender<CameraMessage>,
     image_grabbing_queue: Receiver<CameraResult>,
     pipeline_control_queue: Receiver<PipelineMessage>,
-    result_queue: SyncSender<Result<Mat>>,
+    result_queue: SyncSender<BackgroundResult>,
     bg_subtractor: Box<dyn BackgroundSubtractor>,
 ) -> Result<()> {
     let mut subtractor = bg_subtractor;
@@ -65,7 +66,10 @@ pub fn bg_subtract_pipeline(
                         let output_image = compute_resulting_image(result, &mut subtractor);
                         try_sending(
                             &result_queue,
-                            output_image,
+                            BackgroundResult {
+                                data: output_image,
+                                timestamp: SystemTime::now(),
+                            },
                             "pipeline thread",
                             "result queue",
                         );

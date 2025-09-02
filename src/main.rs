@@ -11,7 +11,8 @@ use crate::display::start_display;
 use crate::game::IdentityGame;
 use crate::threads::{bg_subtract_pipeline, camera_thread, validate_camera};
 use crate::types::{
-    BackgroundSubtractor, CameraMessage, CameraResult, PipelineMessage, SubtractorType,
+    BackgroundResult, BackgroundSubtractor, CameraMessage, CameraResult, PipelineMessage,
+    SubtractorType,
 };
 
 use opencv::prelude::*;
@@ -53,8 +54,10 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         SyncSender<PipelineMessage>,
         Receiver<PipelineMessage>,
     ) = sync_channel(1);
-    let (result_sender, result_receiver): (SyncSender<Result<Mat>>, Receiver<Result<Mat>>) =
-        sync_channel(1);
+    let (result_sender, result_receiver): (
+        SyncSender<BackgroundResult>,
+        Receiver<BackgroundResult>,
+    ) = sync_channel(1);
 
     let grab_handle =
         thread::spawn(move || camera_thread(camera_control_receiver, image_sender, camera_index));

@@ -24,6 +24,7 @@ pub struct MinimapConfig {
 pub struct KeyConfig {
     pub quit_key: String,
     pub reset_key: String,
+    pub toggle_minimap_key: String,
 }
 
 #[derive(Deserialize, Clone)]

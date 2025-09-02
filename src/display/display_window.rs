@@ -2,6 +2,7 @@ use opencv::prelude::*;
 
 use crate::PlatoConfig;
 use crate::display::minimap::Minimap;
+use crate::display::timestep::{self, TimeStep};
 use crate::threads::try_sending;
 use crate::types::{GameTrait, thread_types::*};
 use std::sync::mpsc::{Receiver, SyncSender, TryRecvError};
@@ -30,6 +31,7 @@ struct PlatoApp {
     minimap: Minimap,
     game: Box<dyn GameTrait>,
     config: PlatoConfig,
+    timestep: TimeStep,
 }
 
 impl PlatoApp {
@@ -42,6 +44,7 @@ impl PlatoApp {
         let (window, display) =
             glium::backend::glutin::SimpleWindowBuilder::new().build(event_loop);
         let minimap = Minimap::new(&display, &config)?;
+        let timestep = TimeStep::new();
         let mut app = PlatoApp {
             pipeline_control_queue: pipeline_control_queue.clone(),
             window,
@@ -49,6 +52,7 @@ impl PlatoApp {
             minimap,
             game,
             config,
+            timestep,
         };
         app.init()?;
         Ok(app)
@@ -62,6 +66,7 @@ impl PlatoApp {
 
     fn reset(&mut self) {
         self.game.reset();
+        self.timestep.reset();
     }
 
     fn update(&mut self, mask: Mat) -> Result<(), Box<dyn std::error::Error>> {
@@ -71,9 +76,10 @@ impl PlatoApp {
     }
 
     fn draw(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        self.timestep.update();
         let mut frame = self.display.draw();
         clear_frame(&mut frame);
-        self.game.draw(&mut frame)?;
+        self.game.draw(&mut frame, &self.timestep)?;
         if self.config.minimap_config.show {
             self.minimap.draw(&mut frame)?;
         }
@@ -124,13 +130,18 @@ impl ApplicationHandler for PlatoApp {
                     },
                 ..
             } => match key.as_ref() {
-                Key::Character(val) if val == self.config.key_config.quit_key => {
+                Key::Character(val) if val.to_lowercase() == self.config.key_config.quit_key => {
                     send_pipeline_msg(&self.pipeline_control_queue, PipelineMessage::Quit);
                     event_loop.exit();
                 }
-                Key::Character(val) if val == self.config.key_config.reset_key => {
+                Key::Character(val) if val.to_lowercase() == self.config.key_config.reset_key => {
                     send_pipeline_msg(&self.pipeline_control_queue, PipelineMessage::SetReference);
                     self.reset();
+                }
+                Key::Character(val)
+                    if val.to_lowercase() == self.config.key_config.toggle_minimap_key =>
+                {
+                    self.config.minimap_config.show = !self.config.minimap_config.show;
                 }
                 _ => (),
             },
@@ -145,7 +156,7 @@ pub fn clear_frame(frame: &mut glium::Frame) {
 
 pub fn start_display(
     pipeline_control_queue: SyncSender<PipelineMessage>,
-    result_queue: Receiver<opencv::Result<Mat>>,
+    result_queue: Receiver<BackgroundResult>,
     game: Box<dyn GameTrait>,
     config: PlatoConfig,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -169,7 +180,7 @@ pub fn start_display(
         match result_queue.try_recv() {
             Ok(result) => {
                 send_pipeline_msg(&pipeline_control_queue, PipelineMessage::GenerateImage);
-                match result {
+                match result.data {
                     Ok(mask) => {
                         got_image = true;
                         app.update(mask)?;

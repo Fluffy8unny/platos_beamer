@@ -1,12 +1,13 @@
 use crate::config::{ShaderConfig, load_config};
 use crate::display::display_window::DisplayType;
-use opencv::core::flip;
 use opencv::prelude::*;
+
 pub fn load_shaders(
     path: &str,
     display: &DisplayType,
 ) -> Result<glium::Program, Box<dyn std::error::Error>> {
     let shaders: ShaderConfig = load_config(path)?;
+    println!("loading {:?}", shaders.name);
     Ok(glium::Program::from_source(
         display,
         &shaders.vertex,

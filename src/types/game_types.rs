@@ -1,4 +1,6 @@
-use crate::{config::PlatoConfig, display::display_window::DisplayType};
+use crate::{
+    config::PlatoConfig, display::display_window::DisplayType, display::timestep::TimeStep,
+};
 use glium::winit::keyboard::Key;
 use opencv::prelude::*;
 
@@ -13,7 +15,11 @@ pub trait GameTrait {
         mask: &Mat,
         display: &DisplayType,
     ) -> Result<(), Box<dyn std::error::Error>>;
-    fn draw(&mut self, frame: &mut glium::Frame) -> Result<(), Box<dyn std::error::Error>>;
+    fn draw(
+        &mut self,
+        frame: &mut glium::Frame,
+        timestep: &TimeStep,
+    ) -> Result<(), Box<dyn std::error::Error>>;
     fn key_event(&mut self, event: &Key);
     fn reset(&mut self);
 }

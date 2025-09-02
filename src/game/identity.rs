@@ -1,6 +1,7 @@
 use crate::PlatoConfig;
 use crate::display::display_window::DisplayType;
 use crate::display::primitves::{QUAD_INDICES, Vertex, get_quad_buffer};
+use crate::display::timestep::TimeStep;
 use crate::game::util::{load_shaders, mat_1c_to_texture_r};
 use crate::types::GameTrait;
 
@@ -57,7 +58,11 @@ impl GameTrait for IdentityGame {
         Ok(())
     }
 
-    fn draw(&mut self, frame: &mut glium::Frame) -> Result<(), Box<dyn std::error::Error>> {
+    fn draw(
+        &mut self,
+        frame: &mut glium::Frame,
+        _timestep: &TimeStep,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         frame.draw(
             self.vertex_buffer.as_ref().ok_or("no vertext buffer")?,
             self.index_buffer.as_ref().ok_or("no index buffer")?,

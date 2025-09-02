@@ -12,3 +12,4 @@ dims     = [0.5,0.5]
 ["key_config"]
 quit_key = "q"
 reset_key = "r"
+toggle_minimap_key ="m"
