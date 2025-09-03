@@ -51,10 +51,11 @@ impl Minimap {
 
     pub fn update_texture(
         &mut self,
-        img: &Mat,
+        _image: &Mat, //not implemented yet
+        mask: &Mat,
         display: &DisplayType,
     ) -> Result<(), Box<dyn Error>> {
-        let texture = mat_1c_to_texture_r(display, img)?;
+        let texture = mat_1c_to_texture_r(display, mask)?;
         self.texture = texture;
         Ok(())
     }

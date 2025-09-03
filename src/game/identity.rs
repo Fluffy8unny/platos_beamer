@@ -51,6 +51,7 @@ impl GameTrait for IdentityGame {
 
     fn update(
         &mut self,
+        _image: &Mat,
         mask: &Mat,
         display: &DisplayType,
     ) -> Result<(), Box<dyn std::error::Error>> {

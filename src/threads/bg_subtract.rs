@@ -1,3 +1,4 @@
+use glium::winit;
 use opencv::Result;
 use opencv::prelude::*;
 
@@ -9,11 +10,9 @@ use crate::types::BackgroundSubtractor;
 use crate::types::thread_types::*;
 
 fn compute_resulting_image(
-    image: CameraResult,
+    input_image: Mat,
     subtractor: &mut Box<dyn BackgroundSubtractor>,
 ) -> Result<Mat> {
-    let input_image = image.data?;
-    println!("{:?}", image.timestamp);
     let res = subtractor.apply(input_image);
 
     match res {
@@ -44,49 +43,64 @@ pub fn bg_subtract_pipeline(
 
         //wait for msg from the window thread
         match pipeline_control_queue.recv() {
-            Ok(msg) => match msg {
-                PipelineMessage::Quit => {
-                    try_sending(
-                        &camera_control_queue,
-                        CameraMessage::Quit,
-                        "pipeline thread",
-                        "camera control queue",
-                    );
-                    //discard queried image. If we don't query before we know what happens we waste
-                    //time, but here we have to discard one
-                    let _ = image_grabbing_queue.recv();
-                    println!("Quitting pipeline gracefully");
-                    return Ok(());
-                }
-                PipelineMessage::GenerateImage => match image_grabbing_queue.recv() {
-                    Err(error) => {
-                        eprintln!("receiver error (Pipeline thread, image_grabbing_queue) {error}")
-                    }
-                    Ok(result) => {
-                        let output_image = compute_resulting_image(result, &mut subtractor);
+            Ok(msg) => {
+                match msg {
+                    PipelineMessage::Quit => {
                         try_sending(
-                            &result_queue,
-                            BackgroundResult {
-                                data: output_image,
-                                timestamp: SystemTime::now(),
-                            },
+                            &camera_control_queue,
+                            CameraMessage::Quit,
                             "pipeline thread",
-                            "result queue",
+                            "camera control queue",
                         );
+                        //discard queried image. If we don't query before we know what happens we waste
+                        //time, but here we have to discard one
+                        let _ = image_grabbing_queue.recv();
+                        println!("Quitting pipeline gracefully");
+                        return Ok(());
                     }
-                },
-                PipelineMessage::SetReference => match image_grabbing_queue.recv() {
-                    Err(error) => {
-                        eprintln!("receiver error (Pipeline thread, image_grabbing_queue) {error}")
+                    PipelineMessage::GenerateImage => {
+                        match image_grabbing_queue.recv() {
+                            Err(error) => {
+                                eprintln!(
+                                    "receiver error (Pipeline thread, image_grabbing_queue) {error}"
+                                )
+                            }
+                            Ok(result) => {
+                                let (input_image,output_image) = match result.data{
+                            Ok(camera_res)=>{
+                        let output = compute_resulting_image(camera_res.clone(), &mut subtractor);
+                        (Ok(camera_res),output)
+                            },
+                            Err(e)=> (Err(e),Err(opencv::Error{message:"could not compute mask, since we got no input image".to_string(), code :1})),
+                        };
+                                try_sending(
+                                    &result_queue,
+                                    BackgroundResult {
+                                        mask: output_image,
+                                        image: input_image,
+                                        timestamp: SystemTime::now(),
+                                    },
+                                    "pipeline thread",
+                                    "result queue",
+                                );
+                            }
+                        }
                     }
-                    Ok(result) => match result.data {
-                        Ok(image_data) => subtractor.reset(image_data),
-                        Err(error) => eprintln!(
-                            "receiver error (Pipeline thread, image_grabbing_queue. Could not set reference image.) {error}"
-                        ),
+                    PipelineMessage::SetReference => match image_grabbing_queue.recv() {
+                        Err(error) => {
+                            eprintln!(
+                                "receiver error (Pipeline thread, image_grabbing_queue) {error}"
+                            )
+                        }
+                        Ok(result) => match result.data {
+                            Ok(image_data) => subtractor.reset(image_data),
+                            Err(error) => eprintln!(
+                                "receiver error (Pipeline thread, image_grabbing_queue. Could not set reference image.) {error}"
+                            ),
+                        },
                     },
-                },
-            },
+                }
+            }
             Err(error) => {
                 eprintln!("receiver error (Pipeline Thread, pipeline_control_queue): {error}")
             }

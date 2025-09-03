@@ -69,9 +69,9 @@ impl PlatoApp {
         self.timestep.reset();
     }
 
-    fn update(&mut self, mask: Mat) -> Result<(), Box<dyn std::error::Error>> {
-        self.minimap.update_texture(&mask, &self.display)?;
-        self.game.update(&mask, &self.display)?;
+    fn update(&mut self, image: Mat, mask: Mat) -> Result<(), Box<dyn std::error::Error>> {
+        self.minimap.update_texture(&image, &mask, &self.display)?;
+        self.game.update(&image, &mask, &self.display)?;
         Ok(())
     }
 
@@ -180,13 +180,16 @@ pub fn start_display(
         match result_queue.try_recv() {
             Ok(result) => {
                 send_pipeline_msg(&pipeline_control_queue, PipelineMessage::GenerateImage);
-                match result.data {
-                    Ok(mask) => {
+                match (result.image, result.mask) {
+                    (Ok(image), Ok(mask)) => {
                         got_image = true;
-                        app.update(mask)?;
+                        app.update(image, mask)?;
                     }
-                    Err(error) => {
-                        eprintln!("Window thread reuslt_queue. Received frame is error {error}")
+                    (Err(error), _) => {
+                        eprintln!("Window thread reuslt_queue. Received image is error {error}")
+                    }
+                    (_, Err(error)) => {
+                        eprintln!("Window thread reuslt_queue. Received mask is error {error}")
                     }
                 }
             }

@@ -12,6 +12,7 @@ pub trait GameTrait {
     ) -> Result<(), Box<dyn std::error::Error>>;
     fn update(
         &mut self,
+        image: &Mat,
         mask: &Mat,
         display: &DisplayType,
     ) -> Result<(), Box<dyn std::error::Error>>;

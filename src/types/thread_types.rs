@@ -21,6 +21,7 @@ pub struct CameraResult {
 
 #[derive(Debug)]
 pub struct BackgroundResult {
-    pub data: Result<Mat>,
+    pub mask: Result<Mat>,
+    pub image: Result<Mat>,
     pub timestamp: SystemTime,
 }
