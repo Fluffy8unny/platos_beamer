@@ -1,4 +1,4 @@
-use crate::types::SubtractorType;
+use crate::types::{GameType, SubtractorType};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use toml;
@@ -31,6 +31,7 @@ pub struct KeyConfig {
 pub struct PlatoConfig {
     pub camera_config: CameraConfig,
     pub background_subtractor_config: BgSubConfig,
+    pub game_type: GameType,
     pub minimap_config: MinimapConfig,
     pub key_config: KeyConfig,
 }
@@ -42,7 +43,7 @@ pub struct ShaderConfig {
     pub fragment: String,
 }
 
-fn open_file(path: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub fn open_file(path: &str) -> Result<String, Box<dyn std::error::Error>> {
     match std::fs::read_to_string(path) {
         Ok(res) => Ok(res),
         Err(e) => {

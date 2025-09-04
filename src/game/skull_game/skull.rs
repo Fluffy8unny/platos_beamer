@@ -1,5 +1,5 @@
 use crate::display::timestep::TimeStep;
-use opencv::{core::Range, prelude::*, Result};
+use opencv::{Result, core::Range, prelude::*};
 
 pub enum SkullState {
     Incomming,
@@ -40,7 +40,7 @@ pub fn hit_test(skull: &Skull, mask: &Mat) -> Result<bool> {
         .data_bytes()?
         .iter()
         .fold(0_f32, |sum, data| (*data as f32) + sum);
-    Ok(values_in_mask / skull.scale >= skull.threshold)
+    Ok(values_in_mask / (skull.scale * skull.scale) >= skull.threshold)
 }
 
 pub fn update(skull: Skull, mask: &Mat, timestep: &TimeStep) -> Result<Skull> {
@@ -56,12 +56,12 @@ pub fn update(skull: Skull, mask: &Mat, timestep: &TimeStep) -> Result<Skull> {
     };
 
     match res.state {
-        SkullState::Incomming=>{
-           if res.scale > res.hitable_from{
-               res.state= SkullState::Hitable;
-           } 
-           Ok(res)
-        },
+        SkullState::Incomming => {
+            if res.scale > res.hitable_from {
+                res.state = SkullState::Hitable;
+            }
+            Ok(res)
+        }
         SkullState::Hitable => {
             if hit_test(&res, mask)? {
                 res.state = SkullState::Killed;

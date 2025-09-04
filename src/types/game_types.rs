@@ -1,8 +1,16 @@
 use crate::{
     config::PlatoConfig, display::display_window::DisplayType, display::timestep::TimeStep,
 };
+
 use glium::winit::keyboard::Key;
 use opencv::prelude::*;
+use serde::Deserialize;
+
+#[derive(Deserialize, Clone)]
+pub enum GameType {
+    IdentityGame,
+    SkullGame,
+}
 
 pub trait GameTrait {
     fn init(

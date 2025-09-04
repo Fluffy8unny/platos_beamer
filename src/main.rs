@@ -8,11 +8,11 @@ mod types;
 use crate::bg_subtract::{MogSettings, MogSubtractor, NaiveSettings, NaiveSubtractor};
 use crate::config::{PlatoConfig, load_config};
 use crate::display::start_display;
-use crate::game::IdentityGame;
+use crate::game::{IdentityGame, SkullGame};
 use crate::threads::{bg_subtract_pipeline, camera_thread, validate_camera};
 use crate::types::{
-    BackgroundResult, BackgroundSubtractor, CameraMessage, CameraResult, PipelineMessage,
-    SubtractorType,
+    BackgroundResult, BackgroundSubtractor, CameraMessage, CameraResult, GameTrait, GameType,
+    PipelineMessage, SubtractorType, game_types,
 };
 
 use opencv::prelude::*;
@@ -33,12 +33,23 @@ fn create_bg_selector(selected_type: SubtractorType) -> Result<Box<dyn Backgroun
     })
 }
 
+fn create_game(
+    selected_type: GameType,
+) -> std::result::Result<Box<dyn GameTrait>, Box<dyn std::error::Error>> {
+    match selected_type {
+        GameType::IdentityGame => Ok(Box::new(IdentityGame::new())),
+        GameType::SkullGame => Ok(Box::new(SkullGame::new("src/game/skull_game/config.toml")?)),
+    }
+}
+
 fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let config: PlatoConfig = load_config("config.toml")?;
     let camera_index = config.camera_config.device_index;
     print!("{:?}", camera_index);
-    let selected_type = config.background_subtractor_config.subtractor_type.clone();
-    let test_game = Box::new(IdentityGame::new());
+    let selector_type = config.background_subtractor_config.subtractor_type.clone();
+
+    let game_type = config.game_type.clone();
+    let game = create_game(game_type)?;
     if validate_camera(camera_index).is_err() {
         eprintln!("could not find camera at device idx {}", camera_index);
         return Err(Box::new(Error::new(2, "could not open camera")));
@@ -68,14 +79,14 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
             image_receiver,
             pipeline_control_receiver,
             result_sender,
-            create_bg_selector(selected_type)?,
+            create_bg_selector(selector_type)?,
         )
     });
 
     match start_display(
         pipeline_control_sender,
         result_receiver,
-        test_game,
+        game,
         config.clone(),
     ) {
         Ok(_) => {
