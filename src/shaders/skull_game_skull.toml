@@ -1,0 +1,41 @@
+name = "skull_game_skull_shader"
+
+vertex="""
+     #version 330
+
+      in vec2 position;
+      in vec2 uv;
+      in float rotation;
+      in uint state;
+      in float blend_value;
+      in uint texture_id;
+      
+      out vec2 v_uv_coords;
+      out vec3 v_color;
+      flat out uint v_state;
+      flat out uint v_texture_id;
+
+      void main() {
+          v_uv_coords = uv;
+          v_color = vec3(1.0,1.0,0.0);
+          v_state = state;
+          v_texture_id = texture_id;
+        
+          gl_Position = vec4(position, 0.0, 1.0);
+      }
+     """ 
+
+fragment="""
+      #version 330  
+
+      in vec2 v_uv_coords;
+      in vec3 v_color;
+      flat in uint v_state;
+      flat in uint v_texture_id;
+
+      out vec4 color;
+      
+      void main(){ 
+           color =  vec4(v_color,1.0);
+         }
+      """

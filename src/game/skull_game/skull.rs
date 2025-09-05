@@ -9,14 +9,16 @@ pub enum SkullState {
 }
 
 pub struct Skull {
-    center: (f32, f32),
-    scale: f32,
-    direction: (f32, f32),
-    max_scale: f32,
-    hitable_from: f32,
-    threshold: f32,
-    speed: f32,
-    state: SkullState,
+    pub center: (f32, f32),
+    pub scale: f32,
+    pub rotation: f32,
+    pub state: SkullState,
+
+    pub direction: (f32, f32),
+    pub max_scale: f32,
+    pub hitable_from: f32,
+    pub threshold: f32,
+    pub speed: f32,
 }
 
 pub fn get_bounding_box(skull: &Skull) -> Result<(Range, Range)> {
