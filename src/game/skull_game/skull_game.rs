@@ -2,7 +2,7 @@ use crate::config::load_config;
 use crate::display::{display_window::DisplayType, timestep::TimeStep};
 use crate::game::load_shaders;
 use crate::game::skull_game::config::SkullSettings;
-use crate::game::skull_game::skull::{Skull, SkullState};
+use crate::game::skull_game::skull::{self, Skull, SkullState, hit_test, update};
 use crate::types::game_types::GameTrait;
 use crate::{PlatoConfig, display};
 
@@ -68,7 +68,7 @@ fn create_skull_vertex_buffer(
 ) {
     for (i, (skull, vb_entry)) in skulls.iter().zip(skull_vb.map().chunks_mut(4)).enumerate() {
         let radius = skull.scale / 2_f32;
-        let blend = (skull.scale / skull.threshold).clamp(0_f32, 1_f32);
+        let blend = (skull.scale / skull.hitable_from).clamp(0_f32, 1_f32);
         let state_id = skull_state_to_id(&skull.state);
 
         vb_entry[0].position[0] = skull.center.0 - radius;
@@ -152,7 +152,18 @@ impl GameTrait for SkullGame {
         display: &DisplayType,
         _config: PlatoConfig,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        self.skulls = Some(update_skull_state(vec![], display)?);
+        let test_skull = Skull {
+            center: (0_f32, 0_f32),
+            scale: 0.5_f32,
+            rotation: 0_f32,
+            state: SkullState::Hitable,
+            hitable_from: 0.2,
+            max_scale: 0.5,
+            direction: (0_f32, 1_f32),
+            speed: 0.01,
+            threshold: 0.01,
+        };
+        self.skulls = Some(update_skull_state(vec![test_skull], display)?);
         Ok(())
     }
 
@@ -160,9 +171,29 @@ impl GameTrait for SkullGame {
         &mut self,
         _image: &Mat,
         mask: &Mat,
-        display: &DisplayType,
+        _display: &DisplayType,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
+        match &mut self.skulls {
+            Some(data) => {
+                for skull in data.skulls.iter_mut().filter(|skull| {
+                    if let SkullState::Hitable = skull.state {
+                        true
+                    } else {
+                        false
+                    }
+                }) {
+                    if hit_test(&skull, mask)? {
+                        skull.state = SkullState::Killed;
+                        //spawn particles and stuff
+                    }
+                }
+                Ok(())
+            }
+            None => Err(Box::new(opencv::Error {
+                message: "Skull data was not initialized".to_string(),
+                code: 3,
+            })),
+        }
     }
 
     fn draw(

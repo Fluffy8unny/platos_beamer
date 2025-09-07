@@ -17,27 +17,32 @@ pub struct Skull {
     pub direction: (f32, f32),
     pub max_scale: f32,
     pub hitable_from: f32,
-    pub threshold: f32,
     pub speed: f32,
+    pub threshold: f32,
 }
 
-pub fn get_bounding_box(skull: &Skull) -> Result<(Range, Range)> {
+pub fn get_bounding_box(skull: &Skull, dims: (i32, i32)) -> Result<(Range, Range)> {
+    let convert =
+        |rel_val: f32, img_size: i32| ((img_size as f32) * (rel_val + 1_f32) / 2_f32) as i32;
     let radius = skull.scale / 2_f32;
     Ok((
         Range::new(
-            (skull.center.0 - radius) as i32,
-            (skull.center.0 + radius) as i32,
+            convert(skull.center.0 - radius, dims.0),
+            convert(skull.center.0 + radius, dims.0),
         )?,
         Range::new(
-            (skull.center.1 - radius) as i32,
-            (skull.center.1 + radius) as i32,
+            convert(skull.center.1 - radius, dims.1),
+            convert(skull.center.1 + radius, dims.1),
         )?,
     ))
 }
 
 pub fn hit_test(skull: &Skull, mask: &Mat) -> Result<bool> {
-    let bounding_box = get_bounding_box(skull)?;
-    let submat = mask.rowscols(bounding_box.0, bounding_box.1)?;
+    let dims = (mask.rows(), mask.cols());
+    let bounding_box = get_bounding_box(skull, dims)?;
+    let submat = mask
+        .rowscols(bounding_box.1, bounding_box.0)?
+        .clone_pointee();
     let values_in_mask = submat
         .data_bytes()?
         .iter()
@@ -45,7 +50,7 @@ pub fn hit_test(skull: &Skull, mask: &Mat) -> Result<bool> {
     Ok(values_in_mask / (skull.scale * skull.scale) >= skull.threshold)
 }
 
-pub fn update(skull: Skull, mask: &Mat, timestep: &TimeStep) -> Result<Skull> {
+pub fn update(skull: Skull, timestep: &TimeStep) -> Result<Skull> {
     let new_scale = skull.scale + timestep.time_delta * skull.speed;
     let new_center = (
         skull.center.0 + timestep.time_delta * skull.direction.0,
@@ -65,10 +70,6 @@ pub fn update(skull: Skull, mask: &Mat, timestep: &TimeStep) -> Result<Skull> {
             Ok(res)
         }
         SkullState::Hitable => {
-            if hit_test(&res, mask)? {
-                res.state = SkullState::Killed;
-                return Ok(res);
-            }
             if res.scale > res.max_scale {
                 res.state = SkullState::Survived;
             }
