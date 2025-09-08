@@ -62,6 +62,7 @@ impl GameTrait for IdentityGame {
     fn draw(
         &mut self,
         frame: &mut glium::Frame,
+        _display: &DisplayType,
         _timestep: &TimeStep,
     ) -> Result<(), Box<dyn std::error::Error>> {
         frame.draw(

@@ -17,7 +17,13 @@ vertex="""
 
       void main() {
           v_uv_coords = uv;
-          v_color = vec3(1.0,1.0,0.0);
+          v_color = vec3(blend_value,1.0 - blend_value,0.0);
+          if (state == uint(2)){
+            v_color = vec3(1.0,1.0,0.0);
+          }
+          if (state==uint(3)){
+            v_color = vec3(0.0,0.0,1.0);
+          }
           v_state = state;
           v_texture_id = texture_id;
         
