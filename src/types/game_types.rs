@@ -27,6 +27,7 @@ pub trait GameTrait {
     fn draw(
         &mut self,
         frame: &mut glium::Frame,
+        display: &DisplayType,
         timestep: &TimeStep,
     ) -> Result<(), Box<dyn std::error::Error>>;
     fn key_event(&mut self, event: &Key);

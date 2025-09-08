@@ -5,7 +5,9 @@ mod game;
 mod threads;
 mod types;
 
-use crate::bg_subtract::{MogSettings, MogSubtractor, NaiveSettings, NaiveSubtractor};
+use crate::bg_subtract::{
+    MogSettings, MogSubtractor, NaiveSettings, NaiveSubtractor, TestSettings, TestSubtractor,
+};
 use crate::config::{PlatoConfig, load_config};
 use crate::display::start_display;
 use crate::game::{IdentityGame, SkullGame};
@@ -30,6 +32,9 @@ fn create_bg_selector(selected_type: SubtractorType) -> Result<Box<dyn Backgroun
             background_approximation: Mat::default(),
             settings: NaiveSettings::default(),
         }) as Box<dyn BackgroundSubtractor>,
+        SubtractorType::Test => Box::new(TestSubtractor {
+            settings: TestSettings::default(),
+        }),
     })
 }
 

@@ -79,7 +79,7 @@ impl PlatoApp {
         self.timestep.update();
         let mut frame = self.display.draw();
         clear_frame(&mut frame);
-        self.game.draw(&mut frame, &self.timestep)?;
+        self.game.draw(&mut frame, &self.display, &self.timestep)?;
         if self.config.minimap_config.show {
             self.minimap.draw(&mut frame)?;
         }
@@ -151,7 +151,7 @@ impl ApplicationHandler for PlatoApp {
 }
 
 pub fn clear_frame(frame: &mut glium::Frame) {
-    frame.clear_color(1_f32, 0_f32, 0_f32, 1_f32);
+    frame.clear_color(0_f32, 0_f32, 0_f32, 1_f32);
 }
 
 pub fn start_display(

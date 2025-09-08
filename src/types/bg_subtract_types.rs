@@ -6,6 +6,7 @@ use serde::Deserialize;
 pub enum SubtractorType {
     Naive,
     Mog,
+    Test,
 }
 
 pub trait BackgroundSubtractor {
