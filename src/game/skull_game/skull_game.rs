@@ -1,4 +1,5 @@
 use crate::config::load_config;
+use crate::display::timestep;
 use crate::display::{display_window::DisplayType, timestep::TimeStep};
 use crate::game::load_shaders;
 use crate::game::skull_game::config::SkullSettings;
@@ -20,6 +21,7 @@ pub struct SkullVertex {
     blend_value: f32,
     texture_id: u32,
 }
+
 implement_vertex!(
     SkullVertex,
     position,
@@ -36,28 +38,38 @@ struct SkullData {
     skull_program: glium::Program,
     skulls: Vec<Skull>,
 }
+struct GameState{
+    current_score:  f32,
+}
 
 pub struct SkullGame {
     //2nd rendering path
     skulls: Option<SkullData>,
+    mask: Option<Mat>,
     settings: SkullSettings,
+    game_state: GameState,
 }
+
 
 impl SkullGame {
     pub fn new(config_path: &str) -> Result<SkullGame, Box<dyn std::error::Error>> {
         let settings = load_config(config_path)?;
         Ok(SkullGame {
-            skulls: None,
+            skulls: Vec::with_capacity(settings.max_number),
+            mask: None,
             settings,
+            game_state:GameState {  current_score: 0_f32 }
         })
     }
 }
+
 fn skull_state_to_id(state: &SkullState) -> u32 {
     match state {
         SkullState::Incomming => 0,
         SkullState::Hitable => 1,
         SkullState::Killed => 2,
         SkullState::Survived => 3,
+        SkullState::ToRemove =>4,
     }
 }
 
@@ -152,18 +164,6 @@ impl GameTrait for SkullGame {
         display: &DisplayType,
         _config: PlatoConfig,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let test_skull = Skull {
-            center: (0_f32, 0_f32),
-            scale: 0.5_f32,
-            rotation: 0_f32,
-            state: SkullState::Hitable,
-            hitable_from: 0.2,
-            max_scale: 0.5,
-            direction: (0_f32, 1_f32),
-            speed: 0.01,
-            threshold: 0.01,
-        };
-        self.skulls = Some(update_skull_state(vec![test_skull], display)?);
         Ok(())
     }
 
@@ -173,34 +173,42 @@ impl GameTrait for SkullGame {
         mask: &Mat,
         _display: &DisplayType,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        match &mut self.skulls {
-            Some(data) => {
-                for skull in data.skulls.iter_mut().filter(|skull| {
-                    if let SkullState::Hitable = skull.state {
-                        true
-                    } else {
-                        false
-                    }
-                }) {
-                    if hit_test(&skull, mask)? {
-                        skull.state = SkullState::Killed;
-                        //spawn particles and stuff
-                    }
-                }
-                Ok(())
-            }
-            None => Err(Box::new(opencv::Error {
-                message: "Skull data was not initialized".to_string(),
-                code: 3,
-            })),
-        }
+        self.mask = Some(Mat);
     }
 
     fn draw(
         &mut self,
         frame: &mut glium::Frame,
-        _timestep: &TimeStep,
+        timestep: &TimeStep,
     ) -> Result<(), Box<dyn std::error::Error>> {
+
+        //update skulls
+        match &mut self.skulls {
+            Some(data) => {
+                for &mut skull in data.skulls{
+                    skull.update(mask,timestep);
+                    match skull.state{
+                        SkullState::Killed => {
+                            skull.state = SkullState::ToRemove;
+                            self.game_state.current_score += 1_f32;
+                            //spawn particles and shit
+                        },
+                        SkullState::Survived=>{
+                            skull.state = SkullState::ToRemove;
+                            self.game_state.current_score -= 1_f32;
+                            //spawn particles and shit
+                        },
+                        _=>{},
+                    }
+                let _ = data.extract_if(|skull| if let SkullState::ToRemove = skull.state {false} else {true}).collect();
+                Ok(())
+                }},
+            None => Err(Box::new(opencv::Error {
+                message: "Skull data was not initialized".to_string(),
+                code: 3,
+            })),
+        }?;       
+
         //draw skulls
         match &self.skulls {
             Some(skulls) => frame.draw(
@@ -210,11 +218,12 @@ impl GameTrait for SkullGame {
                 &glium::uniforms::EmptyUniforms,
                 &glium::DrawParameters::default(),
             )?,
-            None => println!("skull shader not initialized"),
-        };
-        Ok(())
+            None => Err(Box::new(opencv::Error {
+                message: "Skull data was not initialized".to_string(),
+                code: 3,
+            })),
     }
-
+}
     fn key_event(&mut self, _event: &Key) {}
     fn reset(&mut self) {}
 }
