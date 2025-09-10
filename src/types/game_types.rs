@@ -23,13 +23,15 @@ pub trait GameTrait {
         image: &Mat,
         mask: &Mat,
         display: &DisplayType,
-    ) -> Result<(), Box<dyn std::error::Error>>;
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        Ok(())
+    }
     fn draw(
         &mut self,
         frame: &mut glium::Frame,
         display: &DisplayType,
         timestep: &TimeStep,
     ) -> Result<(), Box<dyn std::error::Error>>;
-    fn key_event(&mut self, event: &Key);
-    fn reset(&mut self);
+    fn key_event(&mut self, event: &Key) {}
+    fn reset(&mut self) {}
 }

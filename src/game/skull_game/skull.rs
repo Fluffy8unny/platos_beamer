@@ -1,5 +1,6 @@
 use rand::{Rng, rng};
 
+use crate::game::skull_game::skull_game::{GameEvent, SkullVertex};
 use crate::{display::timestep::TimeStep, game::skull_game::config::SkullSettings};
 use opencv::{Result, core::Range, prelude::*};
 
@@ -25,8 +26,75 @@ pub struct Skull {
     pub scale_speed: f32,
     pub move_speed: f32,
     pub threshold: f32,
+
+    pub timer: TimeStep,
 }
 
+fn skull_state_to_id(state: &SkullState) -> u32 {
+    match state {
+        SkullState::Incomming => 0,
+        SkullState::Hitable => 1,
+        SkullState::Killed => 2,
+        SkullState::Survived => 3,
+        SkullState::ToRemove => 4,
+    }
+}
+
+pub fn create_skull_vertex_buffer(
+    skull_vb: &mut glium::VertexBuffer<SkullVertex>,
+    skulls: &Vec<Skull>,
+    index_buffer_data: &mut Vec<u16>,
+) {
+    for (i, (skull, vb_entry)) in skulls.iter().zip(skull_vb.map().chunks_mut(4)).enumerate() {
+        let radius = skull.scale / 2_f32;
+        let blend = (skull.scale / skull.hitable_from).clamp(0_f32, 1_f32);
+        let state_id = skull_state_to_id(&skull.state);
+        println!("{:?}", state_id);
+        vb_entry[0].position[0] = skull.center.0 - radius;
+        vb_entry[0].position[1] = skull.center.1 + radius;
+        vb_entry[0].uv[0] = 0_f32;
+        vb_entry[0].uv[1] = 0_f32;
+        vb_entry[0].rotation = skull.rotation;
+        vb_entry[0].blend_value = blend;
+        vb_entry[0].texture_id = 0;
+        vb_entry[0].state = state_id;
+
+        vb_entry[1].position[0] = skull.center.0 + radius;
+        vb_entry[1].position[1] = skull.center.1 + radius;
+        vb_entry[1].uv[0] = 1_f32;
+        vb_entry[1].uv[1] = 0_f32;
+        vb_entry[1].rotation = skull.rotation;
+        vb_entry[1].blend_value = blend;
+        vb_entry[1].texture_id = 0;
+        vb_entry[1].state = state_id;
+
+        vb_entry[2].position[0] = skull.center.0 - radius;
+        vb_entry[2].position[1] = skull.center.1 - radius;
+        vb_entry[2].uv[0] = 0_f32;
+        vb_entry[2].uv[1] = 1_f32;
+        vb_entry[2].rotation = skull.rotation;
+        vb_entry[2].blend_value = blend;
+        vb_entry[2].texture_id = 0;
+        vb_entry[2].state = state_id;
+
+        vb_entry[3].position[0] = skull.center.0 + radius;
+        vb_entry[3].position[1] = skull.center.1 - radius;
+        vb_entry[3].uv[0] = 1_f32;
+        vb_entry[3].uv[1] = 1_f32;
+        vb_entry[3].rotation = skull.rotation;
+        vb_entry[3].blend_value = blend;
+        vb_entry[3].texture_id = 0;
+        vb_entry[3].state = state_id;
+
+        let num = i as u16;
+        index_buffer_data.push(num * 4);
+        index_buffer_data.push(num * 4 + 1);
+        index_buffer_data.push(num * 4 + 2);
+        index_buffer_data.push(num * 4 + 1);
+        index_buffer_data.push(num * 4 + 3);
+        index_buffer_data.push(num * 4 + 2);
+    }
+}
 pub fn hit_test(skull: &Skull, mask: &Mat) -> Result<bool> {
     let dims = (mask.rows(), mask.cols());
     let bounding_box = get_bounding_box(skull, dims)?;
@@ -65,7 +133,7 @@ impl Skull {
         &mut self,
         mask: &Option<Mat>,
         timestep: &TimeStep,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<Option<GameEvent>, Box<dyn std::error::Error>> {
         let time_delta_s = timestep.time_delta / 1000_f32;
         let new_scale = self.scale + time_delta_s * self.scale_speed;
         let new_center = (
@@ -74,6 +142,7 @@ impl Skull {
         );
         self.center = new_center;
         self.scale = new_scale.clamp(0_f32, self.max_scale);
+        self.timer.update();
 
         match self.state {
             SkullState::Incomming => {
@@ -85,16 +154,36 @@ impl Skull {
                 if let Some(mask_val) = mask {
                     if hit_test(self, &mask_val)? {
                         self.state = SkullState::Killed;
+                        self.timer.reset();
+                        return Ok(Some(GameEvent::Killed {
+                            pos: self.center,
+                            scale: self.scale,
+                        }));
                     }
                 }
 
                 if self.scale >= self.max_scale {
                     self.state = SkullState::Survived;
+                    self.timer.reset();
+                    return Ok(Some(GameEvent::Escaped {
+                        pos: self.center,
+                        scale: self.scale,
+                    }));
                 }
             }
-            _ => {}
+            SkullState::Killed => {
+                if self.timer.runtime > 1000_f32 {
+                    self.state = SkullState::ToRemove;
+                }
+            }
+            SkullState::Survived => {
+                if self.timer.runtime > 1000_f32 {
+                    self.state = SkullState::ToRemove;
+                }
+            }
+            SkullState::ToRemove => {}
         };
-        Ok(())
+        Ok(None)
     }
 }
 
@@ -133,6 +222,7 @@ impl SkullSpawner {
                 scale_speed: self.settings.scale_speed,
                 move_speed: self.settings.move_speed,
                 threshold: self.settings.threshold,
+                timer: TimeStep::new(),
             };
             skulls.push(new_skull);
             self.time_since -= self.settings.spawn_rate;

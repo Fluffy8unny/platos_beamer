@@ -3,7 +3,7 @@ use std::time::Instant;
 type TimeFloat = f32;
 type CountInteger = u64;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct MovingAverage {
     buffer: TimeFloat,
     alpha: TimeFloat,
@@ -29,7 +29,7 @@ impl MovingAverage {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct TimeStep {
     pub start_time: Instant,
     pub last_time: Instant,
