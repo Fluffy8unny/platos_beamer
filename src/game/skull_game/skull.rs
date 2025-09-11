@@ -1,9 +1,11 @@
 use rand::{Rng, rng};
 
-use crate::game::skull_game::skull_game::{GameEvent, SkullVertex};
+use crate::game::skull_game::skull_game::GameEvent;
+use crate::game::skull_game::util::generate_index_for_quad;
 use crate::{display::timestep::TimeStep, game::skull_game::config::SkullSettings};
 use opencv::{Result, core::Range, prelude::*};
 
+use glium::implement_vertex;
 #[derive(Debug, Clone, Copy)]
 pub enum SkullState {
     Incomming,
@@ -26,9 +28,28 @@ pub struct Skull {
     pub scale_speed: f32,
     pub move_speed: f32,
     pub threshold: f32,
-
     pub timer: TimeStep,
 }
+
+#[derive(Copy, Clone)]
+pub struct SkullVertex {
+    pub position: [f32; 2],
+    pub uv: [f32; 2],
+    pub rotation: f32,
+    pub state: u32,
+    pub blend_value: f32,
+    pub texture_id: u32,
+}
+
+implement_vertex!(
+    SkullVertex,
+    position,
+    uv,
+    rotation,
+    state,
+    blend_value,
+    texture_id
+);
 
 fn skull_state_to_id(state: &SkullState) -> u32 {
     match state {
@@ -86,13 +107,7 @@ pub fn create_skull_vertex_buffer(
         vb_entry[3].texture_id = 0;
         vb_entry[3].state = state_id;
 
-        let num = i as u16;
-        index_buffer_data.push(num * 4);
-        index_buffer_data.push(num * 4 + 1);
-        index_buffer_data.push(num * 4 + 2);
-        index_buffer_data.push(num * 4 + 1);
-        index_buffer_data.push(num * 4 + 3);
-        index_buffer_data.push(num * 4 + 2);
+        generate_index_for_quad(i, index_buffer_data);
     }
 }
 pub fn hit_test(skull: &Skull, mask: &Mat) -> Result<bool> {

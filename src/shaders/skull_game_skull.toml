@@ -24,6 +24,9 @@ vertex="""
           if (state==uint(3)){
             v_color = vec3(0.0,0.0,1.0);
           }
+          if (state==uint(4)){
+            v_color = vec3(0.0,0.0,0.0);
+          }
           v_state = state;
           v_texture_id = texture_id;
         

@@ -3,39 +3,29 @@ use crate::config::load_config;
 use crate::display::{display_window::DisplayType, timestep::TimeStep};
 use crate::game::load_shaders;
 use crate::game::skull_game::config::SkullSettings;
-use crate::game::skull_game::skull::{Skull, SkullSpawner, SkullState, create_skull_vertex_buffer};
+use crate::game::skull_game::particle::{
+    self, Particle, ParticleState, ParticleVertex, Target, create_particle_vertex_buffer,
+    generate_random_particles_around_point,
+};
+use crate::game::skull_game::skull::{
+    Skull, SkullSpawner, SkullState, SkullVertex, create_skull_vertex_buffer,
+};
 use crate::types::game_types::GameTrait;
 
-use ::glium::{IndexBuffer, VertexBuffer};
+use ::glium::{IndexBuffer, Surface, VertexBuffer};
 use glium::winit::keyboard::Key;
-use glium::{Surface, implement_vertex};
 use opencv::prelude::*;
-
-#[derive(Copy, Clone)]
-pub struct SkullVertex {
-    pub position: [f32; 2],
-    pub uv: [f32; 2],
-    pub rotation: f32,
-    pub state: u32,
-    pub blend_value: f32,
-    pub texture_id: u32,
-}
-
-implement_vertex!(
-    SkullVertex,
-    position,
-    uv,
-    rotation,
-    state,
-    blend_value,
-    texture_id
-);
 
 struct SkullData {
     skull_vb: VertexBuffer<SkullVertex>,
     skull_idxb: IndexBuffer<u16>,
-    skull_program: glium::Program,
     skulls: Vec<Skull>,
+}
+
+struct ParticleData {
+    particle_vb: VertexBuffer<ParticleVertex>,
+    particle_idxb: IndexBuffer<u16>,
+    particles: Vec<Particle>,
 }
 
 pub enum GameEvent {
@@ -50,7 +40,13 @@ struct GameState {
 pub struct SkullGame {
     //2nd rendering path
     skull_data: Option<SkullData>,
+    particle_data: Option<ParticleData>,
+
+    skull_program: Option<glium::Program>,
+    particle_program: Option<glium::Program>,
+
     skull_spawner: SkullSpawner,
+    crystall_position: (f32, f32),
     mask: Option<Mat>,
     settings: SkullSettings,
     game_state: GameState,
@@ -61,10 +57,14 @@ impl SkullGame {
         let settings: SkullSettings = load_config(config_path)?;
         Ok(SkullGame {
             skull_data: None,
+            particle_data: None,
+            skull_program: None,
+            particle_program: None,
             skull_spawner: SkullSpawner {
                 time_since: 0_f32,
                 settings: settings.clone(),
             },
+            crystall_position: (0_f32, 0_f32),
             mask: None,
             settings,
             game_state: GameState {
@@ -88,19 +88,68 @@ fn update_skull_state(
         create_skull_vertex_buffer(&mut skull_vb, &skulls, &mut index_buffer_data);
     }
 
-    let skull_program = load_shaders("src/shaders/skull_game_skull.toml", display)?;
     let skull_idxb: glium::IndexBuffer<u16> = glium::IndexBuffer::new(
         display,
         glium::index::PrimitiveType::TrianglesList,
         &index_buffer_data,
     )?;
 
+    let res_vec = skulls
+        .into_iter()
+        .filter(|skull| !matches!(skull.state, SkullState::ToRemove))
+        .collect();
+
     Ok(SkullData {
         skull_vb,
         skull_idxb,
-        skull_program,
-        skulls,
+        skulls: res_vec,
     })
+}
+
+fn update_particle_state(
+    particles: Vec<Particle>,
+    display: &DisplayType,
+) -> Result<ParticleData, Box<dyn std::error::Error>> {
+    let count = particles.len();
+
+    let mut vb: glium::VertexBuffer<ParticleVertex> =
+        glium::VertexBuffer::empty_dynamic(display, count * 4)?;
+    let mut index_buffer_data: Vec<u16> = Vec::with_capacity(count * 6);
+    //we can't map over a Vertex buffer length 0
+    if count > 0 {
+        create_particle_vertex_buffer(&mut vb, &particles, &mut index_buffer_data);
+    }
+
+    let res_vec = particles
+        .into_iter()
+        .filter(|particle| !matches!(particle.state, ParticleState::ToRemove))
+        .collect();
+
+    let idxb: glium::IndexBuffer<u16> = glium::IndexBuffer::new(
+        display,
+        glium::index::PrimitiveType::TrianglesList,
+        &index_buffer_data,
+    )?;
+
+    Ok(ParticleData {
+        particle_vb: vb,
+        particle_idxb: idxb,
+        particles: res_vec,
+    })
+}
+
+fn spawn_particles_for_skull(
+    pos: (f32, f32),
+    scale: f32,
+    target_pos: (f32, f32),
+    color: (f32, f32, f32),
+) -> Vec<Particle> {
+    let target = Target {
+        center: target_pos,
+        gravity: 0.5,
+        size: 0.1,
+    };
+    generate_random_particles_around_point(pos, scale, target, 0.6, color, 0.01, 250)
 }
 
 impl GameTrait for SkullGame {
@@ -109,7 +158,18 @@ impl GameTrait for SkullGame {
         display: &DisplayType,
         _config: PlatoConfig,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        let particle_program = load_shaders("src/shaders/skull_game_particle.toml", display)?;
+        self.particle_program = Some(particle_program);
+
+        let skull_program = load_shaders("src/shaders/skull_game_skull.toml", display)?;
+        self.skull_program = Some(skull_program);
+
         self.skull_data = Some(update_skull_state(
+            Vec::with_capacity(self.settings.max_number),
+            display,
+        )?);
+
+        self.particle_data = Some(update_particle_state(
             Vec::with_capacity(self.settings.max_number),
             display,
         )?);
@@ -125,7 +185,6 @@ impl GameTrait for SkullGame {
         self.mask = Some(mask.clone());
         Ok(())
     }
-
     fn draw(
         &mut self,
         frame: &mut glium::Frame,
@@ -133,44 +192,93 @@ impl GameTrait for SkullGame {
         timestep: &TimeStep,
     ) -> Result<(), Box<dyn std::error::Error>> {
         //update skulls
-        match &mut self.skull_data {
-            Some(data) => {
+        match (&mut self.skull_data, &mut self.particle_data) {
+            (Some(data), Some(particles)) => {
                 for skull in data.skulls.iter_mut() {
                     match skull.update(&self.mask, timestep)? {
-                        Some(GameEvent::Killed { pos, scale }) => {}
-                        Some(GameEvent::Escaped { pos, scale }) => {}
+                        Some(GameEvent::Killed { pos, scale }) => {
+                            particles.particles.append(&mut spawn_particles_for_skull(
+                                pos,
+                                scale,
+                                self.crystall_position,
+                                (0.0, 1.0, 0.0),
+                            ));
+                        }
+                        Some(GameEvent::Escaped { pos, scale }) => {
+                            particles.particles.append(&mut spawn_particles_for_skull(
+                                pos,
+                                scale,
+                                self.crystall_position,
+                                (0.0, 1.0, 0.0),
+                            ));
+                        }
                         None => {}
                     }
                 }
-                let _ = data
-                    .skulls
-                    .retain(|skull| !matches!(skull.state, SkullState::ToRemove));
+                for particle in particles.particles.iter_mut() {
+                    particle.update()
+                }
+
                 self.skull_spawner.maybe_spawn(&mut data.skulls, &timestep);
                 Ok(())
             }
-            None => Err(Box::new(opencv::Error {
+            (_, None) => Err(Box::new(opencv::Error {
+                message: "Particle data was not initialized".to_string(),
+                code: 3,
+            })),
+            (None, _) => Err(Box::new(opencv::Error {
                 message: "Skull data was not initialized".to_string(),
                 code: 3,
             })),
         }?;
 
+        //todo fix this mess....
         //update buffer data
         self.skull_data = Some(update_skull_state(
             self.skull_data.as_ref().unwrap().skulls.clone(),
             display,
         )?);
 
+        self.particle_data = Some(update_particle_state(
+            self.particle_data.as_ref().unwrap().particles.clone(),
+            display,
+        )?);
+
         //draw skulls
+        let skull_program = self
+            .skull_program
+            .as_ref()
+            .ok_or(Box::new(opencv::Error::new(4, "Skull program not loaded.")))?;
         match &self.skull_data {
             Some(skulls) => Ok(frame.draw(
                 &skulls.skull_vb,
                 &skulls.skull_idxb,
-                &skulls.skull_program,
+                skull_program,
                 &glium::uniforms::EmptyUniforms,
                 &glium::DrawParameters::default(),
             )?),
             None => Err(Box::new(opencv::Error {
                 message: "Skull data was not initialized".to_string(),
+                code: 3,
+            })),
+        }?;
+        let particle_program =
+            self.particle_program
+                .as_ref()
+                .ok_or(Box::new(opencv::Error::new(
+                    4,
+                    "Particle program not loaded.",
+                )))?;
+        match &self.particle_data {
+            Some(particles) => Ok(frame.draw(
+                &particles.particle_vb,
+                &particles.particle_idxb,
+                particle_program,
+                &glium::uniforms::EmptyUniforms,
+                &glium::DrawParameters::default(),
+            )?),
+            None => Err(Box::new(opencv::Error {
+                message: "Particle data was not initialized".to_string(),
                 code: 3,
             })),
         }
