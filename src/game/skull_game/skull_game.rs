@@ -4,15 +4,17 @@ use crate::display::{display_window::DisplayType, timestep::TimeStep};
 use crate::game::load_shaders;
 use crate::game::skull_game::config::SkullSettings;
 use crate::game::skull_game::particle::{
-    self, Particle, ParticleState, ParticleVertex, Target, create_particle_vertex_buffer,
+    Particle, ParticleState, ParticleVertex, Target, create_particle_vertex_buffer,
     generate_random_particles_around_point,
 };
 use crate::game::skull_game::skull::{
     Skull, SkullSpawner, SkullState, SkullVertex, create_skull_vertex_buffer,
 };
+use crate::game::skull_game::util::load_texture;
 use crate::types::game_types::GameTrait;
 
 use ::glium::{IndexBuffer, Surface, VertexBuffer};
+use glium::texture::Texture2dArray;
 use glium::winit::keyboard::Key;
 use opencv::prelude::*;
 
@@ -43,6 +45,7 @@ pub struct SkullGame {
     particle_data: Option<ParticleData>,
 
     skull_program: Option<glium::Program>,
+    skull_texture: Option<Texture2dArray>,
     particle_program: Option<glium::Program>,
 
     skull_spawner: SkullSpawner,
@@ -59,6 +62,7 @@ impl SkullGame {
             skull_data: None,
             particle_data: None,
             skull_program: None,
+            skull_texture: None,
             particle_program: None,
             skull_spawner: SkullSpawner {
                 time_since: 0_f32,
@@ -158,12 +162,16 @@ impl GameTrait for SkullGame {
         display: &DisplayType,
         _config: PlatoConfig,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let particle_program = load_shaders("src/shaders/skull_game_particle.toml", display)?;
+        let particle_program = load_shaders(&self.settings.particle_shader, display)?;
         self.particle_program = Some(particle_program);
 
-        let skull_program = load_shaders("src/shaders/skull_game_skull.toml", display)?;
+        let skull_program = load_shaders(&self.settings.skull_shader, display)?;
+        self.skull_texture = Some(load_texture(
+            &self.settings.skull_alive_textures,
+            self.settings.mask_color,
+            display,
+        )?);
         self.skull_program = Some(skull_program);
-
         self.skull_data = Some(update_skull_state(
             Vec::with_capacity(self.settings.max_number),
             display,
@@ -201,7 +209,7 @@ impl GameTrait for SkullGame {
                                 pos,
                                 scale,
                                 self.crystall_position,
-                                (0.0, 1.0, 0.0),
+                                (1.0, 1.0, 0.0),
                             ));
                         }
                         Some(GameEvent::Escaped { pos, scale }) => {
@@ -209,7 +217,7 @@ impl GameTrait for SkullGame {
                                 pos,
                                 scale,
                                 self.crystall_position,
-                                (0.0, 1.0, 0.0),
+                                (0.0, 1.0, 1.0),
                             ));
                         }
                         None => {}

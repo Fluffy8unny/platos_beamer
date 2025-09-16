@@ -10,3 +10,17 @@ threshold = 0.1
 x_start = [-0.5,0.5]
 y_start = [-0.5,0.5]
 rot     = [-0.1,0.1]
+skull_shader = "src/shaders/skull_game_skull.toml"
+particle_shader="src/shaders/skull_game_particle.toml"
+mask_color = [255,0,0]
+skull_alive_textures = [
+    "assets/skull/skull_0.png",
+    "assets/skull/skull_1.png",
+    "assets/skull/skull_2.png",
+    "assets/skull/skull_3.png",
+]
+skull_killed_textures= [
+    "assets/skull/skull_kill_0.png",
+    "assets/skull/skull_kill_1.png",
+]
+

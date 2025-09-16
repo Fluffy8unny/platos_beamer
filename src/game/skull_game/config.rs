@@ -14,4 +14,9 @@ pub struct SkullSettings {
     pub x_start: (f32, f32),
     pub y_start: (f32, f32),
     pub rot: (f32, f32),
+    pub mask_color: (u8, u8, u8),
+    pub skull_shader: String,
+    pub particle_shader: String,
+    pub skull_alive_textures: Vec<String>,
+    pub skull_killed_textures: Vec<String>,
 }
