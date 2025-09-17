@@ -41,10 +41,12 @@ fragment="""
       in vec3 v_color;
       flat in uint v_state;
       flat in uint v_texture_id;
+      uniform sampler2DArray tex;
 
       out vec4 color;
       
       void main(){ 
-           color =  vec4(v_color,1.0);
+           vec4 tex_value =  texture(tex, vec3(v_uv_coords, float(0.0)));
+           color =  vec4(v_color,tex_value.r);
          }
       """

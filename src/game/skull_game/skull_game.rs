@@ -13,7 +13,7 @@ use crate::game::skull_game::skull::{
 use crate::game::skull_game::util::load_texture;
 use crate::types::game_types::GameTrait;
 
-use ::glium::{IndexBuffer, Surface, VertexBuffer};
+use ::glium::{IndexBuffer, Surface, VertexBuffer, uniform};
 use glium::texture::Texture2dArray;
 use glium::winit::keyboard::Key;
 use opencv::prelude::*;
@@ -262,7 +262,7 @@ impl GameTrait for SkullGame {
                 &skulls.skull_vb,
                 &skulls.skull_idxb,
                 skull_program,
-                &glium::uniforms::EmptyUniforms,
+                &uniform! { tex: self.skull_texture.as_ref().unwrap() },
                 &glium::DrawParameters::default(),
             )?),
             None => Err(Box::new(opencv::Error {

@@ -54,7 +54,11 @@ fn load_texture_data(
             let lum_value = (*gray_pixel as f32) / 255_f32;
             float_data.push(if *pixel == mask_vec { 0_f32 } else { lum_value });
         }
-        tex_data.push(vec![float_data]);
+        let img_data: Vec<Vec<f32>> = float_data
+            .chunks(img.rows().try_into()?)
+            .map(|x| x.into())
+            .collect();
+        tex_data.push(img_data);
     }
     Ok(tex_data)
 }
