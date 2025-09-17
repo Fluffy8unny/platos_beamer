@@ -38,7 +38,7 @@ pub struct SkullVertex {
     pub rotation: f32,
     pub state: u32,
     pub blend_value: f32,
-    pub texture_id: u32,
+    pub texture_id: f32,
 }
 
 implement_vertex!(
@@ -70,14 +70,15 @@ pub fn create_skull_vertex_buffer(
         let radius = skull.scale / 2_f32;
         let blend = (skull.scale / skull.hitable_from).clamp(0_f32, 1_f32);
         let state_id = skull_state_to_id(&skull.state);
-        println!("{:?}", state_id);
+        let texture_id = (skull.timer.time_delta / 10_f32) % 4_f32;
+        print!("{:?}", texture_id);
         vb_entry[0].position[0] = skull.center.0 - radius;
         vb_entry[0].position[1] = skull.center.1 + radius;
         vb_entry[0].uv[0] = 0_f32;
         vb_entry[0].uv[1] = 0_f32;
         vb_entry[0].rotation = skull.rotation;
         vb_entry[0].blend_value = blend;
-        vb_entry[0].texture_id = 0;
+        vb_entry[0].texture_id = texture_id;
         vb_entry[0].state = state_id;
 
         vb_entry[1].position[0] = skull.center.0 + radius;
@@ -86,7 +87,7 @@ pub fn create_skull_vertex_buffer(
         vb_entry[1].uv[1] = 0_f32;
         vb_entry[1].rotation = skull.rotation;
         vb_entry[1].blend_value = blend;
-        vb_entry[1].texture_id = 0;
+        vb_entry[1].texture_id = texture_id;
         vb_entry[1].state = state_id;
 
         vb_entry[2].position[0] = skull.center.0 - radius;
@@ -95,7 +96,7 @@ pub fn create_skull_vertex_buffer(
         vb_entry[2].uv[1] = 1_f32;
         vb_entry[2].rotation = skull.rotation;
         vb_entry[2].blend_value = blend;
-        vb_entry[2].texture_id = 0;
+        vb_entry[2].texture_id = texture_id;
         vb_entry[2].state = state_id;
 
         vb_entry[3].position[0] = skull.center.0 + radius;
@@ -104,7 +105,7 @@ pub fn create_skull_vertex_buffer(
         vb_entry[3].uv[1] = 1_f32;
         vb_entry[3].rotation = skull.rotation;
         vb_entry[3].blend_value = blend;
-        vb_entry[3].texture_id = 0;
+        vb_entry[3].texture_id = texture_id;
         vb_entry[3].state = state_id;
 
         generate_index_for_quad(i, index_buffer_data);

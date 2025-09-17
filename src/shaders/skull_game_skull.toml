@@ -8,12 +8,12 @@ vertex="""
       in float rotation;
       in uint state;
       in float blend_value;
-      in uint texture_id;
+      in float texture_id;
       
       out vec2 v_uv_coords;
       out vec3 v_color;
       flat out uint v_state;
-      flat out uint v_texture_id;
+      out float v_texture_id;
 
       void main() {
           v_uv_coords = uv;
@@ -39,14 +39,14 @@ fragment="""
 
       in vec2 v_uv_coords;
       in vec3 v_color;
+      in float v_texture_id;
       flat in uint v_state;
-      flat in uint v_texture_id;
       uniform sampler2DArray tex;
 
       out vec4 color;
       
       void main(){ 
-           vec4 tex_value =  texture(tex, vec3(v_uv_coords, float(0.0)));
+           vec4 tex_value =  texture(tex, vec3(v_uv_coords, v_texture_id));
            color =  vec4(v_color,tex_value.r);
          }
       """
