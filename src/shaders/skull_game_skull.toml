@@ -4,6 +4,7 @@ vertex="""
      #version 330
 
       in vec2 position;
+      in vec2 center;
       in float scale;
       in vec2 uv;
       in float rotation;
@@ -23,7 +24,9 @@ vertex="""
           v_state = state;
           v_texture_id = texture_id;
           v_blend_value = blend_value;
-          gl_Position = vec4(position, scale, 1.0);
+          float x = cos(rotation)*(position.x - center.x) - sin(rotation)*(position.y-center.y) + center.x;
+          float y = sin(rotation)*(position.x-center.x) + cos(rotation)*(position.y-center.y) +center.y;
+          gl_Position = vec4(vec2(x,y), scale, 1.0);
       }
      """ 
 

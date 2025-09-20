@@ -34,6 +34,7 @@ pub struct Skull {
 #[derive(Copy, Clone)]
 pub struct SkullVertex {
     pub position: [f32; 2],
+    pub center: [f32; 2],
     pub scale: f32,
     pub uv: [f32; 2],
     pub rotation: f32,
@@ -45,6 +46,7 @@ pub struct SkullVertex {
 implement_vertex!(
     SkullVertex,
     position,
+    center,
     scale,
     uv,
     rotation,
@@ -73,9 +75,10 @@ pub fn create_skull_vertex_buffer(
         let blend = (skull.scale / skull.hitable_from).clamp(0_f32, 1_f32);
         let state_id = skull_state_to_id(&skull.state);
         let texture_id = (skull.timer.time_delta / 10_f32) % 4_f32;
-        print!("{:?}", texture_id);
         vb_entry[0].position[0] = skull.center.0 - radius;
         vb_entry[0].position[1] = skull.center.1 + radius;
+        vb_entry[0].center[0] = skull.center.0;
+        vb_entry[0].center[1] = skull.center.1;
         vb_entry[0].scale = skull.scale;
         vb_entry[0].uv[0] = 0_f32;
         vb_entry[0].uv[1] = 0_f32;
@@ -86,6 +89,8 @@ pub fn create_skull_vertex_buffer(
 
         vb_entry[1].position[0] = skull.center.0 + radius;
         vb_entry[1].position[1] = skull.center.1 + radius;
+        vb_entry[1].center[0] = skull.center.0;
+        vb_entry[1].center[1] = skull.center.1;
         vb_entry[1].scale = skull.scale;
         vb_entry[1].uv[0] = 1_f32;
         vb_entry[1].uv[1] = 0_f32;
@@ -96,6 +101,8 @@ pub fn create_skull_vertex_buffer(
 
         vb_entry[2].position[0] = skull.center.0 - radius;
         vb_entry[2].position[1] = skull.center.1 - radius;
+        vb_entry[2].center[0] = skull.center.0;
+        vb_entry[2].center[1] = skull.center.1;
         vb_entry[2].scale = skull.scale;
         vb_entry[2].uv[0] = 0_f32;
         vb_entry[2].uv[1] = 1_f32;
@@ -106,6 +113,8 @@ pub fn create_skull_vertex_buffer(
 
         vb_entry[3].position[0] = skull.center.0 + radius;
         vb_entry[3].position[1] = skull.center.1 - radius;
+        vb_entry[3].center[0] = skull.center.0;
+        vb_entry[3].center[1] = skull.center.1;
         vb_entry[3].scale = skull.scale;
         vb_entry[3].uv[0] = 1_f32;
         vb_entry[3].uv[1] = 1_f32;
@@ -166,6 +175,8 @@ impl Skull {
         self.scale = new_scale.clamp(0_f32, self.max_scale);
         self.timer.update();
 
+        let mut randomizer = rng();
+        self.rotation += randomizer.random_range(-5.0..5.0) * time_delta_s;
         match self.state {
             SkullState::Incomming => {
                 if self.scale > self.hitable_from {
