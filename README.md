@@ -1,4 +1,4 @@
-# platos_beamer
+# Platos Beamer
 Test for a halloween project
 
 #motivation
