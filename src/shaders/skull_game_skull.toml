@@ -4,6 +4,7 @@ vertex="""
      #version 330
 
       in vec2 position;
+      in float scale;
       in vec2 uv;
       in float rotation;
       in uint state;
@@ -12,25 +13,17 @@ vertex="""
       
       out vec2 v_uv_coords;
       out vec3 v_color;
+      out float v_blend_value;
       flat out uint v_state;
       out float v_texture_id;
 
       void main() {
           v_uv_coords = uv;
           v_color = vec3(blend_value,1.0 - blend_value,0.0);
-          if (state == uint(2)){
-            v_color = vec3(1.0,1.0,0.0);
-          }
-          if (state==uint(3)){
-            v_color = vec3(0.0,0.0,1.0);
-          }
-          if (state==uint(4)){
-            v_color = vec3(0.0,0.0,0.0);
-          }
           v_state = state;
           v_texture_id = texture_id;
-        
-          gl_Position = vec4(position, 0.0, 1.0);
+          v_blend_value = blend_value;
+          gl_Position = vec4(position, scale, 1.0);
       }
      """ 
 
@@ -39,14 +32,21 @@ fragment="""
 
       in vec2 v_uv_coords;
       in vec3 v_color;
+      in float v_blend_value;
       in float v_texture_id;
       flat in uint v_state;
       uniform sampler2DArray tex;
+      uniform sampler2DArray tex_killed;
 
       out vec4 color;
       
       void main(){ 
-           vec4 tex_value =  texture(tex, vec3(v_uv_coords, v_texture_id));
-           color =  vec4(v_color,tex_value.r);
+           
+           vec4 tex_value = v_state<2.0 ?  texture(tex, vec3(v_uv_coords, v_texture_id)) : texture(tex_killed, vec3(v_uv_coords, v_texture_id));
+           float alpha =  tex_value.x * v_blend_value;
+           if (v_state>3.0){
+             alpha = 0.0;
+           }
+           color =  vec4(v_color, alpha);
          }
       """

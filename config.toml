@@ -4,7 +4,7 @@ game_type= "SkullGame"
 device_index=0
 
 ["background_subtractor_config"]
-subtractor_type = "Test"
+subtractor_type = "Naive"
 
 ["minimap_config"]
 show = true

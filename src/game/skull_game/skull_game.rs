@@ -46,6 +46,7 @@ pub struct SkullGame {
 
     skull_program: Option<glium::Program>,
     skull_texture: Option<Texture2dArray>,
+    skull_killed_texture: Option<Texture2dArray>,
     particle_program: Option<glium::Program>,
 
     skull_spawner: SkullSpawner,
@@ -63,6 +64,7 @@ impl SkullGame {
             particle_data: None,
             skull_program: None,
             skull_texture: None,
+            skull_killed_texture: None,
             particle_program: None,
             skull_spawner: SkullSpawner {
                 time_since: 0_f32,
@@ -150,10 +152,10 @@ fn spawn_particles_for_skull(
 ) -> Vec<Particle> {
     let target = Target {
         center: target_pos,
-        gravity: 0.5,
+        gravity: 3.5,
         size: 0.1,
     };
-    generate_random_particles_around_point(pos, scale, target, 0.6, color, 0.01, 250)
+    generate_random_particles_around_point(pos, scale, target, 1.0, color, 0.005, 1850)
 }
 
 impl GameTrait for SkullGame {
@@ -168,6 +170,11 @@ impl GameTrait for SkullGame {
         let skull_program = load_shaders(&self.settings.skull_shader, display)?;
         self.skull_texture = Some(load_texture(
             &self.settings.skull_alive_textures,
+            self.settings.mask_color,
+            display,
+        )?);
+        self.skull_killed_texture = Some(load_texture(
+            &self.settings.skull_killed_textures,
             self.settings.mask_color,
             display,
         )?);
@@ -209,7 +216,7 @@ impl GameTrait for SkullGame {
                                 pos,
                                 scale,
                                 self.crystall_position,
-                                (1.0, 1.0, 0.0),
+                                (0.0, 1.0, 1.0),
                             ));
                         }
                         Some(GameEvent::Escaped { pos, scale }) => {
@@ -217,7 +224,7 @@ impl GameTrait for SkullGame {
                                 pos,
                                 scale,
                                 self.crystall_position,
-                                (0.0, 1.0, 1.0),
+                                (1.0, 0.0, 0.0),
                             ));
                         }
                         None => {}
@@ -257,13 +264,17 @@ impl GameTrait for SkullGame {
             .skull_program
             .as_ref()
             .ok_or(Box::new(opencv::Error::new(4, "Skull program not loaded.")))?;
+        let params = glium::DrawParameters {
+            blend: glium::draw_parameters::Blend::alpha_blending(),
+            ..Default::default()
+        };
         match &self.skull_data {
             Some(skulls) => Ok(frame.draw(
                 &skulls.skull_vb,
                 &skulls.skull_idxb,
                 skull_program,
-                &uniform! { tex: self.skull_texture.as_ref().unwrap() },
-                &glium::DrawParameters::default(),
+                &uniform! { tex: self.skull_texture.as_ref().unwrap(), tex_killed: self.skull_killed_texture.as_ref().unwrap() },
+                &params
             )?),
             None => Err(Box::new(opencv::Error {
                 message: "Skull data was not initialized".to_string(),

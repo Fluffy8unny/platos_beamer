@@ -87,7 +87,7 @@ pub fn update_gravity_particle(particle: &mut Particle) {
         particle.target.center.1 - particle.center.1,
     );
     let magnitude_dx = (dx.0 * dx.0 + dx.1 * dx.1).sqrt();
-    if magnitude_dx < particle.target.size {
+    if magnitude_dx < 0.01 {
         particle.state = ParticleState::ToRemove;
     }
 

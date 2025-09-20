@@ -11,7 +11,7 @@ pub struct NaiveSettings {
 impl NaiveSettings {
     pub fn default() -> NaiveSettings {
         NaiveSettings {
-            threshold_per_channel: 50_f64,
+            threshold_per_channel: 120_f64,
         }
     }
 }

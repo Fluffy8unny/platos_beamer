@@ -34,6 +34,7 @@ pub struct Skull {
 #[derive(Copy, Clone)]
 pub struct SkullVertex {
     pub position: [f32; 2],
+    pub scale: f32,
     pub uv: [f32; 2],
     pub rotation: f32,
     pub state: u32,
@@ -44,6 +45,7 @@ pub struct SkullVertex {
 implement_vertex!(
     SkullVertex,
     position,
+    scale,
     uv,
     rotation,
     state,
@@ -74,6 +76,7 @@ pub fn create_skull_vertex_buffer(
         print!("{:?}", texture_id);
         vb_entry[0].position[0] = skull.center.0 - radius;
         vb_entry[0].position[1] = skull.center.1 + radius;
+        vb_entry[0].scale = skull.scale;
         vb_entry[0].uv[0] = 0_f32;
         vb_entry[0].uv[1] = 0_f32;
         vb_entry[0].rotation = skull.rotation;
@@ -83,6 +86,7 @@ pub fn create_skull_vertex_buffer(
 
         vb_entry[1].position[0] = skull.center.0 + radius;
         vb_entry[1].position[1] = skull.center.1 + radius;
+        vb_entry[1].scale = skull.scale;
         vb_entry[1].uv[0] = 1_f32;
         vb_entry[1].uv[1] = 0_f32;
         vb_entry[1].rotation = skull.rotation;
@@ -92,6 +96,7 @@ pub fn create_skull_vertex_buffer(
 
         vb_entry[2].position[0] = skull.center.0 - radius;
         vb_entry[2].position[1] = skull.center.1 - radius;
+        vb_entry[2].scale = skull.scale;
         vb_entry[2].uv[0] = 0_f32;
         vb_entry[2].uv[1] = 1_f32;
         vb_entry[2].rotation = skull.rotation;
@@ -101,6 +106,7 @@ pub fn create_skull_vertex_buffer(
 
         vb_entry[3].position[0] = skull.center.0 + radius;
         vb_entry[3].position[1] = skull.center.1 - radius;
+        vb_entry[3].scale = skull.scale;
         vb_entry[3].uv[0] = 1_f32;
         vb_entry[3].uv[1] = 1_f32;
         vb_entry[3].rotation = skull.rotation;

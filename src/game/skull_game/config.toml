@@ -1,11 +1,11 @@
-spawn_rate = 1.5
-crystal_position = [0.0,0.0]
+spawn_rate = 2.5
+crystal_position = [0.0,-0.5]
 max_number = 500
 scale_speed   = 0.1
 move_speed    = 0.1
 start_scale = 0.11
-hitable_from = 0.1
-max_scale = 0.4
+hitable_from = 0.4
+max_scale = 0.6
 threshold = 0.1
 x_start = [-0.5,0.5]
 y_start = [-0.5,0.5]
