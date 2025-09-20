@@ -52,6 +52,7 @@ fn load_texture_data(
             .zip(gray.data_typed::<u8>()?)
         {
             let lum_value = (*gray_pixel as f32) / 255_f32;
+            println!("{:?} {:?}", pixel, *pixel == mask_vec);
             float_data.push(if *pixel == mask_vec { 0_f32 } else { lum_value });
         }
         let img_data: Vec<Vec<f32>> = float_data
