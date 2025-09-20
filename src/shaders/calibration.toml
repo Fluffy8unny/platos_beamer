@@ -1,0 +1,27 @@
+name = "minimap"
+
+vertex="""
+     #version 330
+
+      in vec2 position;
+      in vec2 uv;
+      
+      out vec2 uv_coords;
+      void main() {
+          uv_coords = uv;
+          gl_Position = vec4(position, 0.0, 1.0);
+      }
+     """ 
+
+fragment="""
+      #version 330  
+
+      in vec2 uv_coords;
+      out vec4 color;
+      
+      
+      void main(){ 
+         const float border = 0.01;
+           color =  vec4(0.0,0.0,0.0,1.0);
+      }
+      """

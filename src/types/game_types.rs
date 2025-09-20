@@ -10,6 +10,7 @@ use serde::Deserialize;
 pub enum GameType {
     IdentityGame,
     SkullGame,
+    CalibrationGame,
 }
 
 pub trait GameTrait {

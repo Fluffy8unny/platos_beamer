@@ -10,7 +10,7 @@ use crate::bg_subtract::{
 };
 use crate::config::{PlatoConfig, load_config};
 use crate::display::start_display;
-use crate::game::{IdentityGame, SkullGame};
+use crate::game::{CalibrationGame, IdentityGame, SkullGame};
 use crate::threads::{bg_subtract_pipeline, camera_thread, validate_camera};
 use crate::types::{
     BackgroundResult, BackgroundSubtractor, CameraMessage, CameraResult, GameTrait, GameType,
@@ -44,6 +44,7 @@ fn create_game(
     match selected_type {
         GameType::IdentityGame => Ok(Box::new(IdentityGame::new())),
         GameType::SkullGame => Ok(Box::new(SkullGame::new("src/game/skull_game/config.toml")?)),
+        GameType::CalibrationGame => Ok(Box::new(CalibrationGame::new())),
     }
 }
 
