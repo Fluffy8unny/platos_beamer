@@ -1,4 +1,4 @@
-game_type= "SkullGame"
+game_type= "CalibrationGame"
 
 ["camera_config"]
 device_index=0

@@ -17,11 +17,13 @@ fragment="""
       #version 330  
 
       in vec2 uv_coords;
+      uniform sampler2D tex;
+
       out vec4 color;
       
       
       void main(){ 
-         const float border = 0.01;
-           color =  vec4(0.0,0.0,0.0,1.0);
+         float val = texture(tex, vec2(uv_coords.x, uv_coords.y)).x;   
+           color =  vec4(val,val,val,1.0);
       }
       """

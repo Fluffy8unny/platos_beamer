@@ -1,18 +1,20 @@
 use crate::display::display_window::DisplayType;
 use crate::display::primitves::{QUAD_INDICES, Vertex, get_quad_buffer};
 use crate::display::timestep::TimeStep;
-use crate::game::util::{load_shaders, mat_1c_to_texture_r};
+use crate::game::util::{image_to_gray_texture_r, load_shaders};
 use crate::types::GameTrait;
 use crate::{PlatoConfig, display};
 
 use glium::draw_parameters::{DrawParameters, PolygonMode};
 use glium::implement_vertex;
-use glium::index::NoIndices;
+use glium::uniform;
 use glium::winit::keyboard::Key;
 use glium::{Surface, VertexBuffer};
 use opencv::prelude::*;
+
 pub struct CalibrationGame {
     program: Option<glium::Program>,
+    live_img: Option<glium::Texture2d>,
     line_program: Option<glium::Program>,
     vertex_buffer: Option<glium::VertexBuffer<Vertex>>,
     line_buffer: Option<glium::VertexBuffer<LineVertex>>,
@@ -29,6 +31,7 @@ impl CalibrationGame {
     pub fn new() -> CalibrationGame {
         CalibrationGame {
             program: None,
+            live_img: None,
             line_program: None,
             vertex_buffer: None,
             line_buffer: None,
@@ -115,6 +118,7 @@ fn generate_line_buffer(display: &DisplayType) -> VertexBuffer<LineVertex> {
     let vertex_buffer = glium::VertexBuffer::new(display, &vertices).unwrap();
     vertex_buffer
 }
+
 impl GameTrait for CalibrationGame {
     fn init(
         &mut self,
@@ -141,10 +145,11 @@ impl GameTrait for CalibrationGame {
 
     fn update(
         &mut self,
-        _image: &Mat,
-        mask: &Mat,
+        image: &Mat,
+        _mask: &Mat,
         display: &DisplayType,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        self.live_img = Some(image_to_gray_texture_r(display, image)?);
         Ok(())
     }
 
@@ -158,13 +163,13 @@ impl GameTrait for CalibrationGame {
             self.vertex_buffer.as_ref().ok_or("no vertext buffer")?,
             self.index_buffer.as_ref().ok_or("no index buffer")?,
             self.program.as_ref().ok_or("no program")?,
-            &glium::uniforms::EmptyUniforms {},
+            &uniform! {tex : self.live_img.as_ref().ok_or("no image")?},
             &glium::DrawParameters::default(),
         )?;
 
         let params = DrawParameters {
             polygon_mode: PolygonMode::Line,
-            // ... other parameters
+            line_width: Some(5_f32),
             ..Default::default()
         };
         frame.draw(

@@ -1,5 +1,6 @@
 use crate::config::{ShaderConfig, load_config};
 use crate::display::display_window::DisplayType;
+use opencv::imgproc::{COLOR_BGR2GRAY, cvt_color};
 use opencv::prelude::*;
 
 pub fn load_shaders(
@@ -14,6 +15,31 @@ pub fn load_shaders(
         &shaders.fragment,
         None,
     )?)
+}
+
+pub fn image_to_gray_texture_r(
+    display: &DisplayType,
+    mat: &Mat,
+) -> Result<glium::Texture2d, Box<dyn std::error::Error>> {
+    let mut gray_img = Mat::default();
+    match mat.channels() {
+        1 => {
+            gray_img = mat.clone();
+        }
+        3 => {
+            cvt_color(
+                &mat,
+                &mut gray_img,
+                COLOR_BGR2GRAY,
+                1,
+                opencv::core::AlgorithmHint::ALGO_HINT_DEFAULT,
+            )?;
+        }
+        _ => {
+            return Err("invalid matrix provided. Input needs to be either gray or BGR".into());
+        }
+    }
+    mat_1c_to_texture_r(display, &gray_img)
 }
 
 pub fn mat_1c_to_texture_r(
