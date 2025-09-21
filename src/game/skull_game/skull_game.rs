@@ -155,7 +155,7 @@ fn spawn_particles_for_skull(
         gravity: 3.5,
         size: 0.1,
     };
-    generate_random_particles_around_point(pos, scale, target, 1.0, color, 0.005, 1850)
+    generate_random_particles_around_point(pos, scale, target, 1.0, color, 0.015, 1000)
 }
 
 impl GameTrait for SkullGame {
@@ -294,7 +294,7 @@ impl GameTrait for SkullGame {
                 &particles.particle_idxb,
                 particle_program,
                 &glium::uniforms::EmptyUniforms,
-                &glium::DrawParameters::default(),
+                &params,
             )?),
             None => Err(Box::new(opencv::Error {
                 message: "Particle data was not initialized".to_string(),

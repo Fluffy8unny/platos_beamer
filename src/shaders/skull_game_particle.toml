@@ -27,6 +27,9 @@ fragment="""
       out vec4 color;
       
       void main(){ 
-           color =  vec4(v_color,1.0);
+           float blend_x = (1.0 - abs(v_uv_coords.x));
+           float blend_y = (1.0 - abs(v_uv_coords.y));
+           float blend = 0.4*(blend_x*blend_x + blend_y*blend_y);
+           color =  vec4(v_color,blend);
          }
       """

@@ -50,21 +50,21 @@ pub fn create_particle_vertex_buffer(
 
         vb_entry[0].position[0] = particle.center.0 - radius;
         vb_entry[0].position[1] = particle.center.1 + radius;
-        vb_entry[0].uv[0] = 0_f32;
-        vb_entry[0].uv[1] = 0_f32;
+        vb_entry[0].uv[0] = -1_f32;
+        vb_entry[0].uv[1] = -1_f32;
         vb_entry[0].color = [particle.color.0, particle.color.1, particle.color.2];
         vb_entry[0].blend_value = 1_f32;
 
         vb_entry[1].position[0] = particle.center.0 + radius;
         vb_entry[1].position[1] = particle.center.1 + radius;
         vb_entry[1].uv[0] = 1_f32;
-        vb_entry[1].uv[1] = 0_f32;
+        vb_entry[1].uv[1] = -1_f32;
         vb_entry[1].color = [particle.color.0, particle.color.1, particle.color.2];
         vb_entry[1].blend_value = 1_f32;
 
         vb_entry[2].position[0] = particle.center.0 - radius;
         vb_entry[2].position[1] = particle.center.1 - radius;
-        vb_entry[2].uv[0] = 0_f32;
+        vb_entry[2].uv[0] = -1_f32;
         vb_entry[2].uv[1] = 1_f32;
         vb_entry[2].color = [particle.color.0, particle.color.1, particle.color.2];
         vb_entry[2].blend_value = 1_f32;
