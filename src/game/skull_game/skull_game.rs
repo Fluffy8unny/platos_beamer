@@ -155,7 +155,7 @@ fn spawn_particles_for_skull(
         gravity: 3.5,
         size: 0.1,
     };
-    generate_random_particles_around_point(pos, scale, target, 1.0, color, 0.015, 1000)
+    generate_random_particles_around_point(pos, scale, target, 1.5, color, 0.01, 2000)
 }
 
 impl GameTrait for SkullGame {

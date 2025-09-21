@@ -76,7 +76,11 @@ pub fn create_skull_vertex_buffer(
         let radius = skull.scale / 2_f32;
         let blend = (skull.scale / skull.hitable_from).clamp(0_f32, 1_f32);
         let state_id = skull_state_to_id(&skull.state);
-        let texture_id = (skull.timer.runtime / 50_f32) % 4_f32;
+        let texture_id = match skull.state {
+            SkullState::Incomming => (skull.timer.runtime / 50_f32) % 4_f32,
+            SkullState::Hitable => (skull.timer.runtime / 50_f32) % 4_f32,
+            _ => (skull.timer.runtime / 50_f32) % 2_f32,
+        };
         let flashing = if skull.timer.runtime % 3_f32 == 0_f32 {
             1_f32
         } else {
@@ -215,12 +219,12 @@ impl Skull {
                 }
             }
             SkullState::Killed => {
-                if self.timer.runtime > 500_f32 {
+                if self.timer.runtime > 250_f32 {
                     self.state = SkullState::ToRemove;
                 }
             }
             SkullState::Survived => {
-                if self.timer.runtime > 500_f32 {
+                if self.timer.runtime > 250_f32 {
                     self.state = SkullState::ToRemove;
                 }
             }
