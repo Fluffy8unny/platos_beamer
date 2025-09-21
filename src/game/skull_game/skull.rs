@@ -74,7 +74,7 @@ pub fn create_skull_vertex_buffer(
         let radius = skull.scale / 2_f32;
         let blend = (skull.scale / skull.hitable_from).clamp(0_f32, 1_f32);
         let state_id = skull_state_to_id(&skull.state);
-        let texture_id = (skull.timer.time_delta / 10_f32) % 4_f32;
+        let texture_id = (skull.timer.runtime / 50_f32) % 4_f32;
         vb_entry[0].position[0] = skull.center.0 - radius;
         vb_entry[0].position[1] = skull.center.1 + radius;
         vb_entry[0].center[0] = skull.center.0;
@@ -228,7 +228,6 @@ pub struct SkullSpawner {
 impl SkullSpawner {
     pub fn maybe_spawn(&mut self, skulls: &mut Vec<Skull>, timestep: &TimeStep) {
         self.time_since += timestep.time_delta / 1000.0;
-        println!("{:?},{:?}", skulls.len(), self.settings.max_number);
         if skulls.len() > self.settings.max_number {
             return;
         }
