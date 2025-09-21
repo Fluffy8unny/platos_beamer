@@ -40,6 +40,7 @@ pub struct SkullVertex {
     pub rotation: f32,
     pub state: u32,
     pub blend_value: f32,
+    pub flashing: f32,
     pub texture_id: f32,
 }
 
@@ -52,6 +53,7 @@ implement_vertex!(
     rotation,
     state,
     blend_value,
+    flashing,
     texture_id
 );
 
@@ -75,53 +77,60 @@ pub fn create_skull_vertex_buffer(
         let blend = (skull.scale / skull.hitable_from).clamp(0_f32, 1_f32);
         let state_id = skull_state_to_id(&skull.state);
         let texture_id = (skull.timer.runtime / 50_f32) % 4_f32;
-        vb_entry[0].position[0] = skull.center.0 - radius;
-        vb_entry[0].position[1] = skull.center.1 + radius;
-        vb_entry[0].center[0] = skull.center.0;
-        vb_entry[0].center[1] = skull.center.1;
-        vb_entry[0].scale = skull.scale;
-        vb_entry[0].uv[0] = 0_f32;
-        vb_entry[0].uv[1] = 0_f32;
-        vb_entry[0].rotation = skull.rotation;
-        vb_entry[0].blend_value = blend;
-        vb_entry[0].texture_id = texture_id;
-        vb_entry[0].state = state_id;
+        let flashing = if skull.timer.runtime % 3_f32 == 0_f32 {
+            1_f32
+        } else {
+            0_f32
+        };
 
-        vb_entry[1].position[0] = skull.center.0 + radius;
-        vb_entry[1].position[1] = skull.center.1 + radius;
-        vb_entry[1].center[0] = skull.center.0;
-        vb_entry[1].center[1] = skull.center.1;
-        vb_entry[1].scale = skull.scale;
-        vb_entry[1].uv[0] = 1_f32;
-        vb_entry[1].uv[1] = 0_f32;
-        vb_entry[1].rotation = skull.rotation;
-        vb_entry[1].blend_value = blend;
-        vb_entry[1].texture_id = texture_id;
-        vb_entry[1].state = state_id;
+        let update_vb =
+            |x: f32, y: f32, u: f32, v: f32, vb_entry: &mut [SkullVertex], idx: usize| {
+                vb_entry[idx].position[0] = x;
+                vb_entry[idx].position[1] = y;
+                vb_entry[idx].center[0] = skull.center.0;
+                vb_entry[idx].center[1] = skull.center.1;
+                vb_entry[idx].scale = skull.scale;
+                vb_entry[idx].uv[0] = u;
+                vb_entry[idx].uv[1] = v;
+                vb_entry[idx].rotation = skull.rotation;
+                vb_entry[idx].blend_value = blend;
+                vb_entry[idx].flashing = flashing;
+                vb_entry[idx].texture_id = texture_id;
+                vb_entry[idx].state = state_id;
+            };
 
-        vb_entry[2].position[0] = skull.center.0 - radius;
-        vb_entry[2].position[1] = skull.center.1 - radius;
-        vb_entry[2].center[0] = skull.center.0;
-        vb_entry[2].center[1] = skull.center.1;
-        vb_entry[2].scale = skull.scale;
-        vb_entry[2].uv[0] = 0_f32;
-        vb_entry[2].uv[1] = 1_f32;
-        vb_entry[2].rotation = skull.rotation;
-        vb_entry[2].blend_value = blend;
-        vb_entry[2].texture_id = texture_id;
-        vb_entry[2].state = state_id;
-
-        vb_entry[3].position[0] = skull.center.0 + radius;
-        vb_entry[3].position[1] = skull.center.1 - radius;
-        vb_entry[3].center[0] = skull.center.0;
-        vb_entry[3].center[1] = skull.center.1;
-        vb_entry[3].scale = skull.scale;
-        vb_entry[3].uv[0] = 1_f32;
-        vb_entry[3].uv[1] = 1_f32;
-        vb_entry[3].rotation = skull.rotation;
-        vb_entry[3].blend_value = blend;
-        vb_entry[3].texture_id = texture_id;
-        vb_entry[3].state = state_id;
+        update_vb(
+            skull.center.0 - radius,
+            skull.center.1 + radius,
+            0_f32,
+            0_f32,
+            vb_entry,
+            0,
+        );
+        update_vb(
+            skull.center.0 + radius,
+            skull.center.1 + radius,
+            1_f32,
+            0_f32,
+            vb_entry,
+            1,
+        );
+        update_vb(
+            skull.center.0 - radius,
+            skull.center.1 - radius,
+            0_f32,
+            1_f32,
+            vb_entry,
+            2,
+        );
+        update_vb(
+            skull.center.0 + radius,
+            skull.center.1 - radius,
+            1_f32,
+            1_f32,
+            vb_entry,
+            3,
+        );
 
         generate_index_for_quad(i, index_buffer_data);
     }
@@ -166,24 +175,25 @@ impl Skull {
         timestep: &TimeStep,
     ) -> Result<Option<GameEvent>, Box<dyn std::error::Error>> {
         let time_delta_s = timestep.time_delta / 1000_f32;
-        let new_scale = self.scale + time_delta_s * self.scale_speed;
+        let new_scale = (self.scale + time_delta_s * self.scale_speed).clamp(0_f32, self.max_scale);
         let new_center = (
             self.center.0 + time_delta_s * self.direction.0 * self.move_speed,
             self.center.1 + time_delta_s * self.direction.1 * self.move_speed,
         );
-        self.center = new_center;
-        self.scale = new_scale.clamp(0_f32, self.max_scale);
+        self.scale = new_scale;
         self.timer.update();
 
         let mut randomizer = rng();
         self.rotation += randomizer.random_range(-5.0..5.0) * time_delta_s;
         match self.state {
             SkullState::Incomming => {
+                self.center = new_center;
                 if self.scale > self.hitable_from {
                     self.state = SkullState::Hitable;
                 }
             }
             SkullState::Hitable => {
+                self.center = new_center;
                 if let Some(mask_val) = mask {
                     if hit_test(self, &mask_val)? {
                         self.state = SkullState::Killed;
@@ -205,12 +215,12 @@ impl Skull {
                 }
             }
             SkullState::Killed => {
-                if self.timer.runtime > 1000_f32 {
+                if self.timer.runtime > 500_f32 {
                     self.state = SkullState::ToRemove;
                 }
             }
             SkullState::Survived => {
-                if self.timer.runtime > 1000_f32 {
+                if self.timer.runtime > 500_f32 {
                     self.state = SkullState::ToRemove;
                 }
             }

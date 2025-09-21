@@ -107,7 +107,6 @@ impl ApplicationHandler for PlatoApp {
         _window_id: WindowId,
         event: WindowEvent,
     ) {
-        println!("{event:?}");
         if let WindowEvent::KeyboardInput {
             event: KeyEvent { logical_key, .. },
             ..

@@ -10,11 +10,13 @@ vertex="""
       in float rotation;
       in uint state;
       in float blend_value;
+      in float flashing;
       in float texture_id;
       
       out vec2 v_uv_coords;
       out vec3 v_color;
       out float v_blend_value;
+      flat out float v_flashing;
       flat out uint v_state;
       out float v_texture_id;
 
@@ -24,6 +26,7 @@ vertex="""
           v_state = state;
           v_texture_id = texture_id;
           v_blend_value = blend_value;
+          v_flashing = flashing;
           float x = cos(rotation)*(position.x - center.x) - sin(rotation)*(position.y-center.y) + center.x;
           float y = sin(rotation)*(position.x-center.x) + cos(rotation)*(position.y-center.y) +center.y;
           gl_Position = vec4(vec2(x,y), scale, 1.0);
@@ -37,6 +40,7 @@ fragment="""
       in vec3 v_color;
       in float v_blend_value;
       in float v_texture_id;
+      flat in float v_flashing;
       flat in uint v_state;
       uniform sampler2DArray tex;
       uniform sampler2DArray tex_killed;
@@ -50,6 +54,12 @@ fragment="""
            if (v_state>3.0){
              alpha = 0.0;
            }
-           color =  vec4(v_color, alpha);
+
+           vec3 final_color = v_color;
+           
+           if (v_flashing > 0.0 && v_state == 1.0) {
+              final_color = vec3(1.0,1.0,1.0);
+           }
+           color =  vec4(final_color, alpha);
          }
       """
