@@ -20,9 +20,9 @@ impl MogSettings {
         MogSettings {
             history: 250,
             mixtures: 5,
-            background_ratio: 0.8,
-            noise_sigma: 0.6,
-            learning_rate: 0.0,
+            background_ratio: 0.65,
+            noise_sigma: 5.2,
+            learning_rate: 0.05,
         }
     }
 }
