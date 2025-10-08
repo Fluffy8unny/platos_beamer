@@ -6,7 +6,8 @@ mod threads;
 mod types;
 
 use crate::bg_subtract::{
-    MogSettings, MogSubtractor, NaiveSettings, NaiveSubtractor, TestSettings, TestSubtractor,
+    MogSettings, MogSubtractor, NaiveSettings, NaiveSubtractor, OfSettings, OfSubtractor,
+    TestSettings, TestSubtractor,
 };
 use crate::config::{PlatoConfig, load_config};
 use crate::display::start_display;
@@ -32,6 +33,7 @@ fn create_bg_selector(selected_type: SubtractorType) -> Result<Box<dyn Backgroun
             background_approximation: Mat::default(),
             settings: NaiveSettings::default(),
         }) as Box<dyn BackgroundSubtractor>,
+        SubtractorType::OpticalFlow => Box::new(OfSubtractor::new(OfSettings::default())?),
         SubtractorType::Test => Box::new(TestSubtractor {
             settings: TestSettings::default(),
         }),
