@@ -3,7 +3,7 @@ game_type= "SkullGame"
 #game_type= "IdentityGame"
 
 ["camera_config"]
-device_index=2
+device_index=0
 
 ["background_subtractor_config"]
 subtractor_type = "Mog"

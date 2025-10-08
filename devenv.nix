@@ -10,6 +10,7 @@
             pkgs.wayland
             pkgs.glxinfo
             pkgs.libxkbcommon
+            pkgs.alsa-lib.dev
           ];
   pkgs-stable = import inputs.nixpkgs-stable { system = pkgs.stdenv.system; };
   in
@@ -27,6 +28,7 @@
     pkgs.wayland
     pkgs.glxinfo
     pkgs.libxkbcommon
+    pkgs.alsa-lib.dev
   ];
 
   git-hooks.hooks.clippy.enable = true;
