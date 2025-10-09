@@ -1,9 +1,7 @@
 use crate::types::BackgroundSubtractor;
 use opencv::Result;
-use opencv::bgsegm::{BackgroundSubtractorMOG, create_background_subtractor_mog};
-use opencv::core::greater_than_mat_f64;
-use opencv::core::{Mat, MatExpr, Ptr, Vector, split};
-use opencv::prelude::*;
+use opencv::core::{Mat, MatExpr, Vector, cart_to_polar, greater_than_mat_f64, split};
+use opencv::imgproc::{COLOR_BGR2GRAY, cvt_color};
 use opencv::video::calc_optical_flow_farneback;
 
 #[derive(Debug, Clone, Copy)]
@@ -43,17 +41,39 @@ impl OfSubtractor {
     }
 }
 
+fn calc_flow_magnitude(flow: Mat) -> Result<Mat> {
+    let mut channels: Vector<Mat> = Vector::default();
+    split(&flow, &mut channels)?;
+
+    let dx = channels.get(0)?;
+    let dy = channels.get(1)?;
+
+    let (mut magnitude, mut angle) = (Mat::default(), Mat::default());
+    cart_to_polar(&dx, &dy, &mut magnitude, &mut angle, false)?;
+
+    Ok(magnitude)
+}
+
 impl BackgroundSubtractor for OfSubtractor {
     fn apply(&mut self, input_img: Mat) -> Result<MatExpr> {
+        let mut gray_input = Mat::default();
+        cvt_color(
+            &input_img,
+            &mut gray_input,
+            COLOR_BGR2GRAY,
+            1,
+            opencv::core::AlgorithmHint::ALGO_HINT_DEFAULT,
+        )?;
+
         let prev_img = match &self.prev_img {
-            Some(prev) => &prev,
-            None => &input_img,
+            Some(prev) => prev,
+            None => &gray_input,
         };
 
         let mut flow = Mat::default();
         calc_optical_flow_farneback(
             prev_img,
-            &input_img,
+            &gray_input,
             &mut flow,
             0.5,
             self.settings.scales,
@@ -63,14 +83,9 @@ impl BackgroundSubtractor for OfSubtractor {
             self.settings.poly_sigma,
             self.settings.flags,
         )?;
-        let mut channels: Vector<Mat> = Vector::default();
-        split(&flow, &mut channels)?;
-        let dx_mag = channels.get(0)?;
-        let dy_mag = channels.get(1)?;
-        let magnitude = dx_mag.mul(&dx_mag, 1.0)? + dy_mag.mul(&dy_mag, 1.0)?;
-        self.prev_img = Some(input_img);
-
-        Ok(magnitude.into_result()?)
+        self.prev_img = Some(gray_input);
+        let magnitude = calc_flow_magnitude(flow)?;
+        greater_than_mat_f64(&magnitude, 5.0)
     }
 
     fn reset(&mut self, _background_img: Mat) {
