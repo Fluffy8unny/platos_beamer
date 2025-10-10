@@ -15,7 +15,7 @@ use crate::game::{CalibrationGame, IdentityGame, SkullGame};
 use crate::threads::{bg_subtract_pipeline, camera_thread, validate_camera};
 use crate::types::{
     BackgroundResult, BackgroundSubtractor, CameraMessage, CameraResult, GameTrait, GameType,
-    PipelineMessage, SubtractorType, game_types,
+    PipelineMessage, SubtractorType,
 };
 
 use opencv::prelude::*;

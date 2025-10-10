@@ -47,9 +47,9 @@ pub trait GameTrait {
 
     fn update(
         &mut self,
-        image: &Mat,
-        mask: &Mat,
-        display: &DisplayType,
+        _image: &Mat,
+        _mask: &Mat,
+        _display: &DisplayType,
     ) -> Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
@@ -61,7 +61,7 @@ pub trait GameTrait {
         timestep: &TimeStep,
     ) -> Result<(), Box<dyn std::error::Error>>;
 
-    fn key_event(&mut self, event: &Key) {}
+    fn key_event(&mut self, _event: &Key) {}
 
     fn reset(&mut self) {}
 }

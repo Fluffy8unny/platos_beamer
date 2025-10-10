@@ -1,4 +1,3 @@
-use glium::winit;
 use opencv::Result;
 use opencv::prelude::*;
 

@@ -17,8 +17,7 @@ pub struct AudioHandler {
 fn load_sound_data(path: &str) -> SoundSourceResult {
     let file = File::open(path)?;
     let buff_reader = BufReader::new(file);
-    let x = Decoder::new(buff_reader)?;
-    Ok(x.buffered())
+    Ok(Decoder::new(buff_reader)?.buffered())
 }
 
 impl AudioHandler {

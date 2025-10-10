@@ -5,8 +5,6 @@ use opencv::imgcodecs::{ImreadModes, imread};
 use opencv::imgproc::{COLOR_BGR2GRAY, cvt_color};
 use opencv::{Result, prelude::*};
 
-use crate::display;
-
 pub fn generate_index_for_quad(counter: usize, index_buffer_data: &mut Vec<u16>) {
     let num = counter as u16;
     index_buffer_data.push(num * 4);
