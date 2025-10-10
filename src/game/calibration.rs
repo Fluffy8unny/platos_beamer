@@ -1,9 +1,9 @@
+use crate::PlatoConfig;
 use crate::display::display_window::DisplayType;
 use crate::display::primitves::{QUAD_INDICES, Vertex, get_quad_buffer};
 use crate::display::timestep::TimeStep;
 use crate::game::util::{image_to_gray_texture_r, load_shaders};
 use crate::types::GameTrait;
-use crate::PlatoConfig;
 
 use glium::draw_parameters::{DrawParameters, PolygonMode};
 use glium::implement_vertex;

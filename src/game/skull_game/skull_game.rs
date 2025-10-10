@@ -1,20 +1,20 @@
-use crate::PlatoConfig;
 use crate::config::load_config;
 use crate::display::{display_window::DisplayType, timestep::TimeStep};
 use crate::game::load_shaders;
 use crate::game::skull_game::config::SkullSettings;
 use crate::game::skull_game::particle::{
-    Particle, ParticleState, ParticleVertex, Target, create_particle_vertex_buffer,
-    generate_random_particles_around_point,
+    create_particle_vertex_buffer, generate_random_particles_around_point, Particle, ParticleState,
+    ParticleVertex, Target,
 };
 use crate::game::skull_game::skull::{
-    Skull, SkullSpawner, SkullState, SkullVertex, create_skull_vertex_buffer,
+    create_skull_vertex_buffer, Skull, SkullSpawner, SkullState, SkullVertex,
 };
 use crate::game::skull_game::util::load_texture;
-use crate::game::sound;
+use crate::game::sound::AudioHandler;
 use crate::types::game_types::GameTrait;
+use crate::PlatoConfig;
 
-use ::glium::{IndexBuffer, Surface, VertexBuffer, uniform};
+use ::glium::{uniform, IndexBuffer, Surface, VertexBuffer};
 use glium::texture::Texture2dArray;
 use glium::winit::keyboard::Key;
 use opencv::prelude::*;
@@ -54,12 +54,17 @@ pub struct SkullGame {
     crystall_position: (f32, f32),
     mask: Option<Mat>,
     settings: SkullSettings,
+    sound: AudioHandler,
     game_state: GameState,
 }
 
 impl SkullGame {
     pub fn new(config_path: &str) -> Result<SkullGame, Box<dyn std::error::Error>> {
         let settings: SkullSettings = load_config(config_path)?;
+        let sound = AudioHandler::new(vec![(
+            "killed".to_string(),
+            settings.skull_killed_sound.clone(),
+        )])?;
         Ok(SkullGame {
             skull_data: None,
             particle_data: None,
@@ -74,6 +79,7 @@ impl SkullGame {
             crystall_position: (0_f32, 0_f32),
             mask: None,
             settings,
+            sound,
             game_state: GameState {
                 current_score: 0_f32,
             },
@@ -219,6 +225,7 @@ impl GameTrait for SkullGame {
                                 self.crystall_position,
                                 (0.0, 1.0, 1.0),
                             ));
+                            self.sound.play("killed")?;
                         }
                         Some(GameEvent::Escaped { pos, scale }) => {
                             particles.particles.append(&mut spawn_particles_for_skull(
@@ -227,6 +234,7 @@ impl GameTrait for SkullGame {
                                 self.crystall_position,
                                 (1.0, 0.0, 0.0),
                             ));
+                            self.sound.play("killed")?;
                         }
                         None => {}
                     }

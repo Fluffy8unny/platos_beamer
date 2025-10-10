@@ -2,7 +2,7 @@ use opencv::prelude::*;
 
 use crate::PlatoConfig;
 use crate::display::minimap::Minimap;
-use crate::display::timestep::{TimeStep};
+use crate::display::timestep::TimeStep;
 use crate::threads::try_sending;
 use crate::types::{GameTrait, thread_types::*};
 use std::sync::mpsc::{Receiver, SyncSender, TryRecvError};

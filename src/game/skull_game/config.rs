@@ -19,4 +19,5 @@ pub struct SkullSettings {
     pub particle_shader: String,
     pub skull_alive_textures: Vec<String>,
     pub skull_killed_textures: Vec<String>,
+    pub skull_killed_sound: String,
 }

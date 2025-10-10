@@ -23,4 +23,4 @@ skull_killed_textures= [
     "assets/skull/skull_kill_0.png",
     "assets/skull/skull_kill_1.png",
 ]
-
+skull_killed_sound= "assets/sample.mp3"

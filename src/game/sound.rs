@@ -1,5 +1,5 @@
 use rodio::{
-    Decoder, OutputStream, OutputStreamBuilder,
+    Decoder, OutputStream, OutputStreamBuilder, Sink,
     source::{Buffered, Source},
 };
 use std::collections::HashMap;
@@ -11,6 +11,7 @@ pub type SoundSourceResult = Result<SoundSource, Box<dyn std::error::Error>>;
 
 pub struct AudioHandler {
     stream_handle: OutputStream,
+    sink: Sink,
     sounds: HashMap<String, SoundSourceResult>,
 }
 
@@ -27,14 +28,16 @@ impl AudioHandler {
             .into_iter()
             .map(|(name, path)| -> (String, SoundSourceResult) { (name, load_sound_data(&path)) })
             .collect();
+        let sink = rodio::Sink::connect_new(stream_handle.mixer());
         Ok(AudioHandler {
             stream_handle,
+            sink,
             sounds,
         })
     }
 
-    pub fn play(&self, name: String) -> Result<(), Box<dyn std::error::Error>> {
-        match self.sounds.get(&name).ok_or("sound not found")?.as_ref() {
+    pub fn play(&self, name: &str) -> Result<(), Box<dyn std::error::Error>> {
+        match self.sounds.get(name).ok_or("sound not found")?.as_ref() {
             Ok(sound_data) => {
                 let buffered_source = sound_data.clone();
                 self.stream_handle.mixer().add(buffered_source);
