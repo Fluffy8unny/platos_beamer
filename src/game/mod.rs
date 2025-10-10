@@ -1,6 +1,7 @@
 pub mod calibration;
 pub mod identity;
 pub mod skull_game;
+mod sound;
 pub mod util;
 
 pub use calibration::CalibrationGame;

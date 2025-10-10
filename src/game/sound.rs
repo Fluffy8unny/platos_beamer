@@ -1,0 +1,52 @@
+use rodio::{
+    Decoder, OutputStream, OutputStreamBuilder,
+    source::{Buffered, Source},
+};
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::BufReader;
+
+pub type SoundSource = Buffered<Decoder<BufReader<File>>>;
+pub type SoundSourceResult = Result<SoundSource, Box<dyn std::error::Error>>;
+
+pub struct AudioHandler {
+    stream_handle: OutputStream,
+    sounds: HashMap<String, SoundSourceResult>,
+}
+
+fn load_sound_data(path: &str) -> SoundSourceResult {
+    let file = File::open(path)?;
+    let buff_reader = BufReader::new(file);
+    let x = Decoder::new(buff_reader)?;
+    Ok(x.buffered())
+}
+
+impl AudioHandler {
+    pub fn new(sounds: Vec<(String, String)>) -> Result<Self, Box<dyn std::error::Error>> {
+        let stream_handle = OutputStreamBuilder::open_default_stream()?;
+        let sounds: HashMap<String, SoundSourceResult> = sounds
+            .into_iter()
+            .map(|(name, path)| -> (String, SoundSourceResult) { (name, load_sound_data(&path)) })
+            .collect();
+        Ok(AudioHandler {
+            stream_handle,
+            sounds,
+        })
+    }
+
+    pub fn play(&self, name: String) -> Result<(), Box<dyn std::error::Error>> {
+        match self.sounds.get(&name).ok_or("sound not found")?.as_ref() {
+            Ok(sound_data) => {
+                let buffered_source = sound_data.clone();
+                self.stream_handle.mixer().add(buffered_source);
+                Ok(())
+            }
+            Err(_err) => Err(format!("Sound not found {:?}", name).into()),
+        }
+    }
+
+    pub fn add_sound(&mut self, name: String, path: String) {
+        let sound_source = load_sound_data(&path);
+        self.sounds.insert(name, sound_source);
+    }
+}

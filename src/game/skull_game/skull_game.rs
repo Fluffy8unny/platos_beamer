@@ -11,6 +11,7 @@ use crate::game::skull_game::skull::{
     Skull, SkullSpawner, SkullState, SkullVertex, create_skull_vertex_buffer,
 };
 use crate::game::skull_game::util::load_texture;
+use crate::game::sound;
 use crate::types::game_types::GameTrait;
 
 use ::glium::{IndexBuffer, Surface, VertexBuffer, uniform};
