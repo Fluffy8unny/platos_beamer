@@ -6,6 +6,7 @@ use crate::game::skull_game::particle::{
     create_particle_vertex_buffer, generate_random_particles_around_point, Particle, ParticleState,
     ParticleVertex, Target,
 };
+use crate::game::skull_game::position_visualization::spawn_based_on_mask;
 use crate::game::skull_game::skull::{
     create_skull_vertex_buffer, Skull, SkullSpawner, SkullState, SkullVertex,
 };
@@ -213,6 +214,15 @@ impl GameTrait for SkullGame {
         display: &DisplayType,
         timestep: &TimeStep,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        //particles for pos visialization
+        if let Some(mask)=&self.mask{
+          if let Ok(mut motion_particles) =   spawn_based_on_mask(mask){
+             if let Some(particle_data) = &mut self.particle_data{
+                 //particle_data.particles.append(&mut motion_particles);
+             } 
+          }
+        }
+
         //update skulls
         match (&mut self.skull_data, &mut self.particle_data) {
             (Some(data), Some(particles)) => {

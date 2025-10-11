@@ -1,6 +1,6 @@
 use rodio::{
-    Decoder, OutputStream, OutputStreamBuilder, Sink,
     source::{Buffered, Source},
+    Decoder, OutputStream, OutputStreamBuilder, Sink,
 };
 use std::collections::HashMap;
 use std::fs::File;
@@ -11,7 +11,7 @@ pub type SoundSourceResult = Result<SoundSource, Box<dyn std::error::Error>>;
 
 pub struct AudioHandler {
     stream_handle: OutputStream,
-    sink: Sink,
+    _sink: Sink, //needs to have the same lifetime as stream_handle
     sounds: HashMap<String, SoundSourceResult>,
 }
 
@@ -31,7 +31,7 @@ impl AudioHandler {
         let sink = rodio::Sink::connect_new(stream_handle.mixer());
         Ok(AudioHandler {
             stream_handle,
-            sink,
+            _sink:sink,
             sounds,
         })
     }
