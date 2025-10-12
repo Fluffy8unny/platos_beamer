@@ -3,8 +3,9 @@ use crate::display::{display_window::DisplayType, timestep::TimeStep};
 use crate::game::load_shaders;
 use crate::game::skull_game::config::SkullSettings;
 use crate::game::skull_game::particle::{
-    create_particle_vertex_buffer, generate_random_particles_around_point, Particle, ParticleState,
-    ParticleVertex, Target,
+    create_particle_vertex_buffer, generate_random_particles_around_point,
+    generate_random_repulsed_particles_around_point, Particle, ParticleState, ParticleVertex,
+    Target,
 };
 use crate::game::skull_game::position_visualization::spawn_based_on_mask;
 use crate::game::skull_game::skull::{
@@ -163,7 +164,7 @@ fn spawn_particles_for_skull(
         gravity: 3.5,
         size: 0.1,
     };
-    generate_random_particles_around_point(pos, scale, target, 1.5, color, 0.01, 2000)
+    generate_random_particles_around_point(pos, scale, target, 1.0, color, 0.01, 2000)
 }
 
 impl GameTrait for SkullGame {
@@ -215,12 +216,12 @@ impl GameTrait for SkullGame {
         timestep: &TimeStep,
     ) -> Result<(), Box<dyn std::error::Error>> {
         //particles for pos visialization
-        if let Some(mask)=&self.mask{
-          if let Ok(mut motion_particles) =   spawn_based_on_mask(mask,100){
-             if let Some(particle_data) = &mut self.particle_data{
-                 particle_data.particles.append(&mut motion_particles);
-             } 
-          }
+        if let Some(mask) = &self.mask {
+            if let Ok(mut motion_particles) = spawn_based_on_mask(mask, 100) {
+                if let Some(particle_data) = &mut self.particle_data {
+                    particle_data.particles.append(&mut motion_particles);
+                }
+            }
         }
 
         //update skulls
@@ -238,12 +239,16 @@ impl GameTrait for SkullGame {
                             self.sound.play("killed")?;
                         }
                         Some(GameEvent::Escaped { pos, scale }) => {
-                            particles.particles.append(&mut spawn_particles_for_skull(
-                                pos,
-                                scale,
-                                self.crystall_position,
-                                (1.0, 0.0, 0.0),
-                            ));
+                            particles.particles.append(
+                                &mut generate_random_repulsed_particles_around_point(
+                                    pos,
+                                    scale,
+                                    1.0_f32,
+                                    (1.0, 0.0, 0.0),
+                                    0.02,
+                                    800,
+                                ),
+                            );
                             self.sound.play("killed")?;
                         }
                         None => {}
@@ -253,7 +258,7 @@ impl GameTrait for SkullGame {
                     particle.update()
                 }
 
-                self.skull_spawner.maybe_spawn(&mut data.skulls, &timestep);
+                self.skull_spawner.maybe_spawn(&mut data.skulls, timestep);
                 Ok(())
             }
             (_, None) => Err(Box::new(opencv::Error {

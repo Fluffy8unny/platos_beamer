@@ -2,7 +2,7 @@ use opencv::core::{find_non_zero, Point};
 use opencv::prelude::*;
 use rand::seq::{IndexedRandom, SliceRandom};
 
-use crate::game::skull_game::particle::{update_gravity_particle, Particle, Target};
+use crate::game::skull_game::particle::{update_gravity_particle, update_linear_particle, Particle, Target};
 fn convert_opencv_to_opengl_coords(pos: i32, dim: i32) -> f32 {
     let rel_pos = (pos as f32) / (dim as f32); //[0,1]
     2_f32 * rel_pos - 1.0_f32
@@ -32,11 +32,11 @@ pub fn spawn_based_on_mask(
 
             Ok(Particle::new(
                 gl_pos,
-                0.1,
-                (0.9, 0.9, 0.9),
-                (0.0, 0.10),
+                0.05,
+                (0.59, 0.59, 0.59),
+                (0.0, 1.0),
                 target,
-                update_gravity_particle,
+                update_linear_particle,
             ))
         })
         .filter_map(|res| res.ok())

@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
 use glium::implement_vertex;
-use rand::{Rng, rng};
+use rand::{rng, Rng};
 
 use crate::display::timestep::TimeStep;
 use crate::game::skull_game::util::generate_index_for_quad;
@@ -80,14 +80,39 @@ pub fn create_particle_vertex_buffer(
     }
 }
 
-pub fn update_gravity_particle(particle: &mut Particle) {
-    let dt = particle.timer.time_delta / 1000_f32;
-    let dx = (
+fn get_dt(particle: &Particle) -> f32 {
+    particle.timer.time_delta / 1000_f32
+}
+
+fn get_distance_to_target(particle: &Particle) -> (f32, f32) {
+    (
         particle.target.center.0 - particle.center.0,
         particle.target.center.1 - particle.center.1,
-    );
-    let magnitude_dx = (dx.0 * dx.0 + dx.1 * dx.1).sqrt();
-    if magnitude_dx < 0.01 {
+    )
+}
+
+fn magnitude(vector: (f32, f32)) -> f32 {
+    (vector.0 * vector.0 + vector.1 * vector.1).sqrt()
+}
+
+fn update_particle_based_on_acceleration(
+    particle: &mut Particle,
+    dv: (f32, f32),
+    dt: f32,
+    drag: f32,
+) {
+    particle.velocity.0 = particle.velocity.0 * drag + dv.0 * dt;
+    particle.velocity.1 = particle.velocity.1 * drag + dv.1 * dt;
+
+    particle.center.0 += particle.velocity.0 * dt;
+    particle.center.1 += particle.velocity.1 * dt;
+}
+pub fn update_gravity_particle(particle: &mut Particle) {
+    let dt = get_dt(particle);
+    let dx = get_distance_to_target(particle);
+
+    let magnitude_dx = magnitude(dx);
+    if magnitude_dx < particle.target.size {
         particle.state = ParticleState::ToRemove;
     }
 
@@ -95,12 +120,51 @@ pub fn update_gravity_particle(particle: &mut Particle) {
         dx.0 * particle.target.gravity / magnitude_dx,
         dx.1 * particle.target.gravity / magnitude_dx,
     );
+    update_particle_based_on_acceleration(particle, dv, dt, 0.95);
+}
 
-    particle.velocity.0 = particle.velocity.0 * 0.95 + dv.0 * dt;
-    particle.velocity.1 = particle.velocity.1 * 0.95 + dv.1 * dt;
+pub fn update_linear_particle(particle: &mut Particle) {
+    let dt = get_dt(particle);
 
     particle.center.0 += particle.velocity.0 * dt;
     particle.center.1 += particle.velocity.1 * dt;
+
+    //signed distance function without normalization
+    //this is the distance between the center and a line though the target,
+    //perpendicular to velocity
+    let d_x =   particle.velocity.1 * (particle.target.center.1 - particle.center.1);
+    let d_y =   -particle.velocity.0 * (particle.target.center.0 - particle.center.0);
+    if d_x - d_y < 0_f32 {
+        particle.state = ParticleState::ToRemove;
+    }
+}
+
+pub fn update_repulsed_particle(particle: &mut Particle) {
+    let dt = get_dt(particle);
+    let dx = get_distance_to_target(particle);
+    let mag = magnitude(dx);
+
+    //screen goes from -1 to 1, thus the diagonal is sqrt(2*2 + 2*2)
+    if mag > 8_f32.sqrt() {
+        particle.state = ParticleState::ToRemove;
+    }
+
+    let dv = (
+        -dx.0 * particle.target.gravity / mag,
+        -dx.1 * particle.target.gravity / mag,
+    );
+
+    update_particle_based_on_acceleration(particle, dv, dt, 1.0);
+}
+
+fn get_random_point_in_area(point: (f32, f32), area: f32) -> (f32, f32) {
+    let mut randomizer = rng();
+    let r = randomizer.random_range(0_f32..area / 2_f32);
+    let phi = randomizer.random_range(0_f32..2_f32 * PI);
+
+    let x = phi.cos() * r + point.0;
+    let y = phi.sin() * r + point.1;
+    (x, y)
 }
 
 pub fn generate_random_particles_around_point(
@@ -113,23 +177,48 @@ pub fn generate_random_particles_around_point(
     number: usize,
 ) -> Vec<Particle> {
     let mut result: Vec<Particle> = Vec::with_capacity(number);
-    let mut randomizer = rng();
-
     for _ in 0..number {
-        let r = randomizer.random_range(0_f32..area / 2_f32);
-        let phi = randomizer.random_range(0_f32..2_f32 * PI);
-
-        let x = phi.cos() * r + point.0;
-        let y = phi.sin() * r + point.1;
-        let v_0 = (x - point.0, y - point.1);
+        let q = get_random_point_in_area(point, area);
+        let v_0 = (q.0 - point.0, q.1 - point.1);
         let v_norm = max_initial_speed / (v_0.0 * v_0.0 + v_0.1 * v_0.1).sqrt();
         let particle = Particle::new(
-            (x, y),
+            q,
             scale,
             color,
             (v_0.0 * v_norm, v_0.1 * v_norm),
             target,
             update_gravity_particle,
+        );
+        result.push(particle);
+    }
+    result
+}
+
+pub fn generate_random_repulsed_particles_around_point(
+    point: (f32, f32),
+    area: f32,
+    max_initial_speed: f32,
+    color: (f32, f32, f32),
+    scale: f32,
+    number: usize,
+) -> Vec<Particle> {
+    let mut result: Vec<Particle> = Vec::with_capacity(number);
+    for _ in 0..number {
+        let q = get_random_point_in_area(point, area);
+        let target = Target {
+            center: point,
+            gravity: 1_f32,
+            size: 1_f32,
+        };
+        let v_0 = (q.0 - point.0, q.1 - point.1);
+        let v_norm = max_initial_speed / (v_0.0 * v_0.0 + v_0.1 * v_0.1).sqrt();
+        let particle = Particle::new(
+            q,
+            scale,
+            color,
+            (v_0.0 * v_norm, v_0.1 * v_norm),
+            target,
+            update_repulsed_particle,
         );
         result.push(particle);
     }
