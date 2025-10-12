@@ -12,7 +12,7 @@ use crate::game::skull_game::skull::{
     create_skull_vertex_buffer, Skull, SkullSpawner, SkullState, SkullVertex,
 };
 use crate::game::skull_game::util::load_texture;
-use crate::game::sound::AudioHandler;
+use crate::game::sound::{AudioHandler, SoundType};
 use crate::types::game_types::GameTrait;
 use crate::PlatoConfig;
 
@@ -56,17 +56,13 @@ pub struct SkullGame {
     crystall_position: (f32, f32),
     mask: Option<Mat>,
     settings: SkullSettings,
-    sound: AudioHandler,
+    sound: Option<AudioHandler>,
     game_state: GameState,
 }
 
 impl SkullGame {
     pub fn new(config_path: &str) -> Result<SkullGame, Box<dyn std::error::Error>> {
         let settings: SkullSettings = load_config(config_path)?;
-        let sound = AudioHandler::new(vec![(
-            "killed".to_string(),
-            settings.skull_killed_sound.clone(),
-        )])?;
         Ok(SkullGame {
             skull_data: None,
             particle_data: None,
@@ -81,7 +77,7 @@ impl SkullGame {
             crystall_position: (0_f32, 0_f32),
             mask: None,
             settings,
-            sound,
+            sound:None,
             game_state: GameState {
                 current_score: 0_f32,
             },
@@ -171,7 +167,7 @@ impl GameTrait for SkullGame {
     fn init(
         &mut self,
         display: &DisplayType,
-        _config: PlatoConfig,
+        config: PlatoConfig,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let particle_program = load_shaders(&self.settings.particle_shader, display)?;
         self.particle_program = Some(particle_program);
@@ -197,6 +193,10 @@ impl GameTrait for SkullGame {
             Vec::with_capacity(self.settings.max_number),
             display,
         )?);
+        self.sound = Some( AudioHandler::new(vec![(
+            "killed".to_string(),
+            self.settings.skull_killed_sound.clone(),
+        )], config.sound_config)?);
         Ok(())
     }
 
@@ -217,7 +217,7 @@ impl GameTrait for SkullGame {
     ) -> Result<(), Box<dyn std::error::Error>> {
         //particles for pos visialization
         if let Some(mask) = &self.mask {
-            if let Ok(mut motion_particles) = spawn_based_on_mask(mask, 100) {
+            if let Ok(mut motion_particles) = spawn_based_on_mask(mask, 200) {
                 if let Some(particle_data) = &mut self.particle_data {
                     particle_data.particles.append(&mut motion_particles);
                 }
@@ -236,7 +236,7 @@ impl GameTrait for SkullGame {
                                 self.crystall_position,
                                 (0.0, 1.0, 1.0),
                             ));
-                            self.sound.play("killed")?;
+                            self.sound.as_ref().ok_or("sound not initialized")?.play("killed",SoundType::Sfx)?;
                         }
                         Some(GameEvent::Escaped { pos, scale }) => {
                             particles.particles.append(
@@ -249,7 +249,7 @@ impl GameTrait for SkullGame {
                                     800,
                                 ),
                             );
-                            self.sound.play("killed")?;
+                            self.sound.as_ref().ok_or("sound not initialized")?.play("killed", SoundType::Sfx)?;
                         }
                         None => {}
                     }

@@ -28,12 +28,20 @@ pub struct KeyConfig {
 }
 
 #[derive(Deserialize, Clone)]
+pub struct SoundConfig {
+    pub master_volume: f32,
+    pub sfx_volume: f32,
+    pub music_volume: f32,
+}
+
+#[derive(Deserialize, Clone)]
 pub struct PlatoConfig {
     pub camera_config: CameraConfig,
     pub background_subtractor_config: BgSubConfig,
     pub game_type: GameType,
     pub minimap_config: MinimapConfig,
     pub key_config: KeyConfig,
+    pub sound_config: SoundConfig,
 }
 
 #[derive(Deserialize)]

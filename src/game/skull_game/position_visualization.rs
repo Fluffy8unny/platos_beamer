@@ -32,9 +32,10 @@ pub fn spawn_based_on_mask(
 
             Ok(Particle::new(
                 gl_pos,
-                0.05,
-                (0.59, 0.59, 0.59),
-                (0.0, 1.0),
+                0.025,
+                (1.0, 0.5, 1.0),
+                1.0,
+                (0.0, 0.7),
                 target,
                 update_linear_particle,
             ))

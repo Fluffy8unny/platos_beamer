@@ -10,9 +10,11 @@ vertex="""
       
       out vec2 v_uv_coords;
       out vec3 v_color;
+      out float v_blenc_value;
 
       void main() {
           v_uv_coords = uv;
+          v_blenc_value = blend_value;
           v_color = color;
           gl_Position = vec4(position, 0.0, 1.0);
       }
@@ -23,13 +25,14 @@ fragment="""
 
       in vec2 v_uv_coords;
       in vec3 v_color;
+      in float v_blenc_value;
 
       out vec4 color;
       
       void main(){ 
            float blend_x = (1.0 - abs(v_uv_coords.x));
            float blend_y = (1.0 - abs(v_uv_coords.y));
-           float blend = 0.1*(blend_x*blend_x + blend_y*blend_y);
+           float blend = 0.2*v_blenc_value*(blend_x*blend_x + blend_y*blend_y);
            color =  vec4(v_color,blend);
          }
       """

@@ -26,6 +26,7 @@ pub struct Particle {
     update_function: fn(&mut Particle),
     target: Target,
     scale: f32,
+    opacity: f32,
     velocity: (f32, f32),
     timer: TimeStep,
     pub state: ParticleState,
@@ -53,29 +54,28 @@ pub fn create_particle_vertex_buffer(
         vb_entry[0].uv[0] = -1_f32;
         vb_entry[0].uv[1] = -1_f32;
         vb_entry[0].color = [particle.color.0, particle.color.1, particle.color.2];
-        vb_entry[0].blend_value = 1_f32;
+        vb_entry[0].blend_value = particle.opacity;
 
         vb_entry[1].position[0] = particle.center.0 + radius;
         vb_entry[1].position[1] = particle.center.1 + radius;
         vb_entry[1].uv[0] = 1_f32;
         vb_entry[1].uv[1] = -1_f32;
         vb_entry[1].color = [particle.color.0, particle.color.1, particle.color.2];
-        vb_entry[1].blend_value = 1_f32;
+        vb_entry[1].blend_value = particle.opacity;
 
         vb_entry[2].position[0] = particle.center.0 - radius;
         vb_entry[2].position[1] = particle.center.1 - radius;
         vb_entry[2].uv[0] = -1_f32;
         vb_entry[2].uv[1] = 1_f32;
         vb_entry[2].color = [particle.color.0, particle.color.1, particle.color.2];
-        vb_entry[2].blend_value = 1_f32;
+        vb_entry[2].blend_value = particle.opacity;
 
         vb_entry[3].position[0] = particle.center.0 + radius;
         vb_entry[3].position[1] = particle.center.1 - radius;
         vb_entry[3].uv[0] = 1_f32;
         vb_entry[3].uv[1] = 1_f32;
         vb_entry[3].color = [particle.color.0, particle.color.1, particle.color.2];
-        vb_entry[3].blend_value = 1_f32;
-
+        vb_entry[3].blend_value = particle.opacity;
         generate_index_for_quad(i, index_buffer_data);
     }
 }
@@ -128,13 +128,13 @@ pub fn update_linear_particle(particle: &mut Particle) {
 
     particle.center.0 += particle.velocity.0 * dt;
     particle.center.1 += particle.velocity.1 * dt;
-
+    particle.opacity = (particle.opacity - dt).clamp(0_f32, 1_f32);
     //signed distance function without normalization
     //this is the distance between the center and a line though the target,
     //perpendicular to velocity
     let d_x =   particle.velocity.1 * (particle.target.center.1 - particle.center.1);
     let d_y =   -particle.velocity.0 * (particle.target.center.0 - particle.center.0);
-    if d_x - d_y < 0_f32 {
+    if d_x - d_y < 0_f32 || particle.opacity == 0_f32{
         particle.state = ParticleState::ToRemove;
     }
 }
@@ -185,6 +185,7 @@ pub fn generate_random_particles_around_point(
             q,
             scale,
             color,
+            1.0,
             (v_0.0 * v_norm, v_0.1 * v_norm),
             target,
             update_gravity_particle,
@@ -216,6 +217,7 @@ pub fn generate_random_repulsed_particles_around_point(
             q,
             scale,
             color,
+            1.0,
             (v_0.0 * v_norm, v_0.1 * v_norm),
             target,
             update_repulsed_particle,
@@ -230,12 +232,14 @@ impl Particle {
         center: (f32, f32),
         scale: f32,
         color: (f32, f32, f32),
+        opacity: f32,
         velocity: (f32, f32),
         target: Target,
         update_function: fn(&mut Particle),
     ) -> Particle {
         Particle {
             color,
+            opacity,
             center,
             target,
             scale,
