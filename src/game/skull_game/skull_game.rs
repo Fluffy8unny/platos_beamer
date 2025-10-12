@@ -22,13 +22,13 @@ use opencv::prelude::*;
 
 struct SkullData {
     skull_vb: VertexBuffer<SkullVertex>,
-    skull_idxb: IndexBuffer<u16>,
+    skull_idxb: IndexBuffer<u32>,
     skulls: Vec<Skull>,
 }
 
 struct ParticleData {
     particle_vb: VertexBuffer<ParticleVertex>,
-    particle_idxb: IndexBuffer<u16>,
+    particle_idxb: IndexBuffer<u32>,
     particles: Vec<Particle>,
 }
 
@@ -96,13 +96,13 @@ fn update_skull_state(
 
     let mut skull_vb: glium::VertexBuffer<SkullVertex> =
         glium::VertexBuffer::empty_dynamic(display, skull_count * 4)?;
-    let mut index_buffer_data: Vec<u16> = Vec::with_capacity(skull_count * 6);
+    let mut index_buffer_data: Vec<u32> = Vec::with_capacity(skull_count * 6);
     //we can't map over a Vertex buffer length 0
     if skull_count > 0 {
         create_skull_vertex_buffer(&mut skull_vb, &skulls, &mut index_buffer_data);
     }
 
-    let skull_idxb: glium::IndexBuffer<u16> = glium::IndexBuffer::new(
+    let skull_idxb: glium::IndexBuffer<u32> = glium::IndexBuffer::new(
         display,
         glium::index::PrimitiveType::TrianglesList,
         &index_buffer_data,
@@ -128,7 +128,7 @@ fn update_particle_state(
 
     let mut vb: glium::VertexBuffer<ParticleVertex> =
         glium::VertexBuffer::empty_dynamic(display, count * 4)?;
-    let mut index_buffer_data: Vec<u16> = Vec::with_capacity(count * 6);
+    let mut index_buffer_data: Vec<u32> = Vec::with_capacity(count * 6);
     //we can't map over a Vertex buffer length 0
     if count > 0 {
         create_particle_vertex_buffer(&mut vb, &particles, &mut index_buffer_data);
@@ -139,7 +139,7 @@ fn update_particle_state(
         .filter(|particle| !matches!(particle.state, ParticleState::ToRemove))
         .collect();
 
-    let idxb: glium::IndexBuffer<u16> = glium::IndexBuffer::new(
+    let idxb: glium::IndexBuffer<u32> = glium::IndexBuffer::new(
         display,
         glium::index::PrimitiveType::TrianglesList,
         &index_buffer_data,
@@ -216,9 +216,9 @@ impl GameTrait for SkullGame {
     ) -> Result<(), Box<dyn std::error::Error>> {
         //particles for pos visialization
         if let Some(mask)=&self.mask{
-          if let Ok(mut motion_particles) =   spawn_based_on_mask(mask){
+          if let Ok(mut motion_particles) =   spawn_based_on_mask(mask,100){
              if let Some(particle_data) = &mut self.particle_data{
-                 //particle_data.particles.append(&mut motion_particles);
+                 particle_data.particles.append(&mut motion_particles);
              } 
           }
         }

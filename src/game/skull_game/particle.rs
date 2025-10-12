@@ -43,7 +43,7 @@ implement_vertex!(ParticleVertex, position, uv, color, blend_value,);
 pub fn create_particle_vertex_buffer(
     skull_vb: &mut glium::VertexBuffer<ParticleVertex>,
     skulls: &Vec<Particle>,
-    index_buffer_data: &mut Vec<u16>,
+    index_buffer_data: &mut Vec<u32>,
 ) {
     for (i, (particle, vb_entry)) in skulls.iter().zip(skull_vb.map().chunks_mut(4)).enumerate() {
         let radius = particle.scale / 2_f32;

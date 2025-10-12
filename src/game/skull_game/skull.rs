@@ -70,7 +70,7 @@ fn skull_state_to_id(state: &SkullState) -> u32 {
 pub fn create_skull_vertex_buffer(
     skull_vb: &mut glium::VertexBuffer<SkullVertex>,
     skulls: &Vec<Skull>,
-    index_buffer_data: &mut Vec<u16>,
+    index_buffer_data: &mut Vec<u32>,
 ) {
     for (i, (skull, vb_entry)) in skulls.iter().zip(skull_vb.map().chunks_mut(4)).enumerate() {
         let radius = skull.scale / 2_f32;
