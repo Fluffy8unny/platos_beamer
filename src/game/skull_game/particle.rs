@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
 use glium::implement_vertex;
-use rand::{rng, Rng};
+use rand::{Rng, rng};
 
 use crate::display::timestep::TimeStep;
 use crate::game::skull_game::util::generate_index_for_quad;
@@ -132,9 +132,9 @@ pub fn update_linear_particle(particle: &mut Particle) {
     //signed distance function without normalization
     //this is the distance between the center and a line though the target,
     //perpendicular to velocity
-    let d_x =   particle.velocity.1 * (particle.target.center.1 - particle.center.1);
-    let d_y =   -particle.velocity.0 * (particle.target.center.0 - particle.center.0);
-    if d_x - d_y < 0_f32 || particle.opacity == 0_f32{
+    let d_x = particle.velocity.1 * (particle.target.center.1 - particle.center.1);
+    let d_y = -particle.velocity.0 * (particle.target.center.0 - particle.center.0);
+    if d_x - d_y < 0_f32 || particle.opacity == 0_f32 {
         particle.state = ParticleState::ToRemove;
     }
 }

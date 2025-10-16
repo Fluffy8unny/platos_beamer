@@ -1,6 +1,6 @@
 use rodio::{
-    source::{Buffered, Source},
     Decoder, OutputStream, OutputStreamBuilder, Sink,
+    source::{Buffered, Source},
 };
 use std::collections::HashMap;
 use std::fs::File;
@@ -10,9 +10,9 @@ use crate::config::SoundConfig;
 
 pub type SoundSource = Buffered<Decoder<BufReader<File>>>;
 pub type SoundSourceResult = Result<SoundSource, Box<dyn std::error::Error>>;
-pub enum SoundType{
+pub enum SoundType {
     Sfx,
-    Music
+    Music,
 }
 
 pub struct AudioHandler {
@@ -29,7 +29,10 @@ fn load_sound_data(path: &str) -> SoundSourceResult {
 }
 
 impl AudioHandler {
-    pub fn new(sounds: Vec<(String, String)>, config: SoundConfig)-> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(
+        sounds: Vec<(String, String)>,
+        config: SoundConfig,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let stream_handle = OutputStreamBuilder::open_default_stream()?;
         let sounds: HashMap<String, SoundSourceResult> = sounds
             .into_iter()
@@ -38,24 +41,30 @@ impl AudioHandler {
         let sink = rodio::Sink::connect_new(stream_handle.mixer());
         Ok(AudioHandler {
             stream_handle,
-            _sink:sink,
+            _sink: sink,
             sounds,
             config,
         })
     }
-    fn get_volume(&self, sound_type:SoundType)->f32{
-        let amp = match sound_type{
+    fn get_volume(&self, sound_type: SoundType) -> f32 {
+        let amp = match sound_type {
             SoundType::Sfx => self.config.sfx_volume,
-            SoundType::Music=>self.config.music_volume,
+            SoundType::Music => self.config.music_volume,
         };
         amp * self.config.master_volume
     }
 
-    pub fn play(&self, name: &str,sound_type: SoundType) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn play(
+        &self,
+        name: &str,
+        sound_type: SoundType,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         match self.sounds.get(name).ok_or("sound not found")?.as_ref() {
             Ok(sound_data) => {
                 let buffered_source = sound_data.clone();
-                self.stream_handle.mixer().add(buffered_source.amplify_normalized( self.get_volume(sound_type)));
+                self.stream_handle
+                    .mixer()
+                    .add(buffered_source.amplify_normalized(self.get_volume(sound_type)));
                 Ok(())
             }
             Err(_err) => Err(format!("Sound not found {:?}", name).into()),

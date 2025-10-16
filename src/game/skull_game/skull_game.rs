@@ -1,22 +1,22 @@
+use crate::PlatoConfig;
 use crate::config::load_config;
 use crate::display::{display_window::DisplayType, timestep::TimeStep};
 use crate::game::load_shaders;
 use crate::game::skull_game::config::SkullSettings;
+use crate::game::skull_game::moon::{Moon, MoonVertex, create_moon_vertex_buffer};
 use crate::game::skull_game::particle::{
-    create_particle_vertex_buffer, generate_random_particles_around_point,
-    generate_random_repulsed_particles_around_point, Particle, ParticleState, ParticleVertex,
-    Target,
+    Particle, ParticleState, ParticleVertex, Target, create_particle_vertex_buffer,
+    generate_random_particles_around_point, generate_random_repulsed_particles_around_point,
 };
 use crate::game::skull_game::position_visualization::spawn_based_on_mask;
 use crate::game::skull_game::skull::{
-    create_skull_vertex_buffer, Skull, SkullSpawner, SkullState, SkullVertex,
+    Skull, SkullSpawner, SkullState, SkullVertex, create_skull_vertex_buffer,
 };
 use crate::game::skull_game::util::load_texture;
 use crate::game::sound::{AudioHandler, SoundType};
 use crate::types::game_types::GameTrait;
-use crate::PlatoConfig;
 
-use ::glium::{uniform, IndexBuffer, Surface, VertexBuffer};
+use ::glium::{IndexBuffer, Surface, VertexBuffer, uniform};
 use glium::texture::Texture2dArray;
 use glium::winit::keyboard::Key;
 use opencv::prelude::*;
@@ -25,6 +25,12 @@ struct SkullData {
     skull_vb: VertexBuffer<SkullVertex>,
     skull_idxb: IndexBuffer<u32>,
     skulls: Vec<Skull>,
+}
+
+struct MoonData {
+    moon_vb: VertexBuffer<MoonVertex>,
+    moon_idxb: IndexBuffer<u32>,
+    moon: Moon,
 }
 
 struct ParticleData {
@@ -38,15 +44,11 @@ pub enum GameEvent {
     Escaped { pos: (f32, f32), scale: f32 },
 }
 
-struct GameState {
-    current_score: f32,
-}
-
 pub struct SkullGame {
-    //2nd rendering path
     skull_data: Option<SkullData>,
     particle_data: Option<ParticleData>,
 
+    moon_data: Option<MoonData>,
     skull_program: Option<glium::Program>,
     skull_texture: Option<Texture2dArray>,
     skull_killed_texture: Option<Texture2dArray>,
@@ -57,7 +59,6 @@ pub struct SkullGame {
     mask: Option<Mat>,
     settings: SkullSettings,
     sound: Option<AudioHandler>,
-    game_state: GameState,
 }
 
 impl SkullGame {
@@ -66,6 +67,7 @@ impl SkullGame {
         Ok(SkullGame {
             skull_data: None,
             particle_data: None,
+            moon_data: None,
             skull_program: None,
             skull_texture: None,
             skull_killed_texture: None,
@@ -77,10 +79,7 @@ impl SkullGame {
             crystall_position: (0_f32, 0_f32),
             mask: None,
             settings,
-            sound:None,
-            game_state: GameState {
-                current_score: 0_f32,
-            },
+            sound: None,
         })
     }
 }
@@ -172,17 +171,27 @@ impl GameTrait for SkullGame {
         let particle_program = load_shaders(&self.settings.particle_shader, display)?;
         self.particle_program = Some(particle_program);
 
+        let moon = Moon::new(100, (0_f32, 0_f32), 0.2);
+        let (moon_vb, moon_idxb) = create_moon_vertex_buffer(&moon, display)?;
+        self.moon_data = Some(MoonData {
+            moon_vb,
+            moon_idxb,
+            moon,
+        });
+
         let skull_program = load_shaders(&self.settings.skull_shader, display)?;
         self.skull_texture = Some(load_texture(
             &self.settings.skull_alive_textures,
             self.settings.mask_color,
             display,
         )?);
+
         self.skull_killed_texture = Some(load_texture(
             &self.settings.skull_killed_textures,
             self.settings.mask_color,
             display,
         )?);
+
         self.skull_program = Some(skull_program);
         self.skull_data = Some(update_skull_state(
             Vec::with_capacity(self.settings.max_number),
@@ -193,10 +202,14 @@ impl GameTrait for SkullGame {
             Vec::with_capacity(self.settings.max_number),
             display,
         )?);
-        self.sound = Some( AudioHandler::new(vec![(
-            "killed".to_string(),
-            self.settings.skull_killed_sound.clone(),
-        )], config.sound_config)?);
+
+        self.sound = Some(AudioHandler::new(
+            vec![(
+                "killed".to_string(),
+                self.settings.skull_killed_sound.clone(),
+            )],
+            config.sound_config,
+        )?);
         Ok(())
     }
 
@@ -236,7 +249,10 @@ impl GameTrait for SkullGame {
                                 self.crystall_position,
                                 (0.0, 1.0, 1.0),
                             ));
-                            self.sound.as_ref().ok_or("sound not initialized")?.play("killed",SoundType::Sfx)?;
+                            self.sound
+                                .as_ref()
+                                .ok_or("sound not initialized")?
+                                .play("killed", SoundType::Sfx)?;
                         }
                         Some(GameEvent::Escaped { pos, scale }) => {
                             particles.particles.append(
@@ -249,7 +265,10 @@ impl GameTrait for SkullGame {
                                     800,
                                 ),
                             );
-                            self.sound.as_ref().ok_or("sound not initialized")?.play("killed", SoundType::Sfx)?;
+                            self.sound
+                                .as_ref()
+                                .ok_or("sound not initialized")?
+                                .play("killed", SoundType::Sfx)?;
                         }
                         None => {}
                     }
