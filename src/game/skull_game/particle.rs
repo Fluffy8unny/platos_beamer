@@ -1,5 +1,7 @@
 use std::f32::consts::PI;
 
+use crate::display::display_window::DisplayType;
+use ::glium::{IndexBuffer, VertexBuffer};
 use glium::implement_vertex;
 use rand::{Rng, rng};
 
@@ -254,4 +256,42 @@ impl Particle {
         self.timer.update();
         (self.update_function)(self);
     }
+}
+
+pub struct ParticleData {
+    pub particle_vb: VertexBuffer<ParticleVertex>,
+    pub particle_idxb: IndexBuffer<u32>,
+    pub particles: Vec<Particle>,
+}
+
+pub fn update_particle_state(
+    particles: Vec<Particle>,
+    display: &DisplayType,
+) -> Result<ParticleData, Box<dyn std::error::Error>> {
+    let count = particles.len();
+
+    let mut vb: glium::VertexBuffer<ParticleVertex> =
+        glium::VertexBuffer::empty_dynamic(display, count * 4)?;
+    let mut index_buffer_data: Vec<u32> = Vec::with_capacity(count * 6);
+    //we can't map over a Vertex buffer length 0
+    if count > 0 {
+        create_particle_vertex_buffer(&mut vb, &particles, &mut index_buffer_data);
+    }
+
+    let res_vec = particles
+        .into_iter()
+        .filter(|particle| !matches!(particle.state, ParticleState::ToRemove))
+        .collect();
+
+    let idxb: glium::IndexBuffer<u32> = glium::IndexBuffer::new(
+        display,
+        glium::index::PrimitiveType::TrianglesList,
+        &index_buffer_data,
+    )?;
+
+    Ok(ParticleData {
+        particle_vb: vb,
+        particle_idxb: idxb,
+        particles: res_vec,
+    })
 }

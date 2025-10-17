@@ -1,11 +1,14 @@
+use opencv::{Result, core::Range, prelude::*};
 use rand::{Rng, rng};
 
+use crate::display::display_window::DisplayType;
 use crate::game::skull_game::skull_game::GameEvent;
 use crate::game::skull_game::util::generate_index_for_quad;
 use crate::{display::timestep::TimeStep, game::skull_game::config::SkullSettings};
-use opencv::{Result, core::Range, prelude::*};
 
+use ::glium::{IndexBuffer, VertexBuffer};
 use glium::implement_vertex;
+
 #[derive(Debug, Clone, Copy)]
 pub enum SkullState {
     Incomming,
@@ -232,6 +235,44 @@ impl Skull {
         };
         Ok(None)
     }
+}
+
+pub struct SkullData {
+    pub skull_vb: VertexBuffer<SkullVertex>,
+    pub skull_idxb: IndexBuffer<u32>,
+    pub skulls: Vec<Skull>,
+}
+
+pub fn update_skull_state(
+    skulls: Vec<Skull>,
+    display: &DisplayType,
+) -> Result<SkullData, Box<dyn std::error::Error>> {
+    let skull_count = skulls.len();
+
+    let mut skull_vb: glium::VertexBuffer<SkullVertex> =
+        glium::VertexBuffer::empty_dynamic(display, skull_count * 4)?;
+    let mut index_buffer_data: Vec<u32> = Vec::with_capacity(skull_count * 6);
+    //we can't map over a Vertex buffer length 0
+    if skull_count > 0 {
+        create_skull_vertex_buffer(&mut skull_vb, &skulls, &mut index_buffer_data);
+    }
+
+    let skull_idxb: glium::IndexBuffer<u32> = glium::IndexBuffer::new(
+        display,
+        glium::index::PrimitiveType::TrianglesList,
+        &index_buffer_data,
+    )?;
+
+    let res_vec = skulls
+        .into_iter()
+        .filter(|skull| !matches!(skull.state, SkullState::ToRemove))
+        .collect();
+
+    Ok(SkullData {
+        skull_vb,
+        skull_idxb,
+        skulls: res_vec,
+    })
 }
 
 pub struct SkullSpawner {

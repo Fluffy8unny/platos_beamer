@@ -115,8 +115,7 @@ fn generate_line_buffer(display: &DisplayType) -> VertexBuffer<LineVertex> {
             position: [0.1, 0.1],
         },
     ];
-    let vertex_buffer = glium::VertexBuffer::new(display, &vertices).unwrap();
-    vertex_buffer
+    glium::VertexBuffer::new(display, &vertices).unwrap()
 }
 
 impl GameTrait for CalibrationGame {
