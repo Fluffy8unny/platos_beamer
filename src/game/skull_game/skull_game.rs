@@ -79,9 +79,7 @@ impl SkullGame {
     }
 
     fn hit_test(&mut self, timestep: &TimeStep) -> Result<(), Box<dyn std::error::Error>> {
-        //get reference to the moon
         let moon_ref: &mut MoonData = self.moon_data.as_mut().ok_or("moon not defined")?;
-        //reference to the sound controller
         let sound_ref = self.sound.as_ref().ok_or("sound not initialized")?;
 
         //hit test

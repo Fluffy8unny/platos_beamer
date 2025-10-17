@@ -1,12 +1,12 @@
+use crate::config::SoundConfig;
 use rodio::{
+    source::{Buffered, Repeat, Source, Stoppable},
     Decoder, OutputStream, OutputStreamBuilder, Sink,
-    source::{Buffered, Source},
 };
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
-
-use crate::config::SoundConfig;
+use std::sync::{Arc, Mutex};
 
 pub type SoundSource = Buffered<Decoder<BufReader<File>>>;
 pub type SoundSourceResult = Result<SoundSource, Box<dyn std::error::Error>>;
@@ -20,6 +20,7 @@ pub struct AudioHandler {
     _sink: Sink, //needs to have the same lifetime as stream_handle
     sounds: HashMap<String, SoundSourceResult>,
     config: SoundConfig,
+    background_music: Option<Sink>,
 }
 
 fn load_sound_data(path: &str) -> SoundSourceResult {
@@ -43,9 +44,41 @@ impl AudioHandler {
             stream_handle,
             _sink: sink,
             sounds,
+            background_music: None,
             config,
         })
     }
+
+    pub fn stop_bgm(&mut self) {
+        if let Some(sink) = self.background_music.as_mut() {
+            sink.stop();
+        }
+    }
+
+    pub fn start_repeating_music(
+        &mut self,
+        name: String,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        self.stop_bgm();
+        let repeating_source = match self
+            .sounds
+            .get(&name)
+            .ok_or(format!("sound {:?} not found", name))?
+            .as_ref()
+        {
+            Ok(res) => res
+                .clone()
+                .repeat_infinite()
+                .stoppable()
+                .amplify_normalized(self.get_volume(SoundType::Music)),
+            Err(_err) => return Err(format!("sound not found {:?}", name).into()),
+        };
+        let sink = rodio::Sink::connect_new(self.stream_handle.mixer());
+        sink.append(repeating_source);
+        self.background_music = Some(sink);
+        Ok(())
+    }
+
     fn get_volume(&self, sound_type: SoundType) -> f32 {
         let amp = match sound_type {
             SoundType::Sfx => self.config.sfx_volume,

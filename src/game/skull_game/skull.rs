@@ -201,7 +201,7 @@ impl Skull {
             SkullState::Hitable => {
                 self.center = new_center;
                 if let Some(mask_val) = mask {
-                    if hit_test(self, &mask_val)? {
+                    if hit_test(self, mask_val)? {
                         self.state = SkullState::Killed;
                         self.timer.reset();
                         return Ok(Some(GameEvent::Killed {
