@@ -10,7 +10,7 @@ use crate::game::skull_game::particle::{
     generate_random_repulsed_particles_around_point, update_particle_state,
 };
 use crate::game::skull_game::position_visualization::spawn_based_on_mask;
-use crate::game::skull_game::skull::{SkullData, SkullSpawner, update_skull_state};
+use crate::game::skull_game::skull::{SkullData, SkullSpawner,GameEvent, update_skull_state};
 use crate::game::skull_game::util::load_texture;
 use crate::game::sound::{AudioHandler, SoundType};
 use crate::types::game_types::GameTrait;
@@ -28,12 +28,6 @@ struct MoonData {
     moon_idxb: IndexBuffer<u32>,
     moon: Moon,
 }
-
-pub enum GameEvent {
-    Killed { pos: (f32, f32), scale: f32 },
-    Escaped { pos: (f32, f32), scale: f32 },
-}
-
 pub struct SkullGame {
     skull_data: Option<SkullData>,
     particle_data: Option<ParticleData>,
@@ -82,7 +76,7 @@ impl SkullGame {
         generate_random_particles_around_point(pos, scale, target, 1.0, color, 0.01, 2000)
     }
 
-    pub fn hit_test(&mut self, timestep: &TimeStep) -> Result<(), Box<dyn std::error::Error>> {
+    fn hit_test(&mut self, timestep: &TimeStep) -> Result<(), Box<dyn std::error::Error>> {
         //get reference to the moon
         let moon_ref: &mut MoonData = self.moon_data.as_mut().ok_or("moon not defined")?;
         //reference to the sound controller
@@ -138,6 +132,41 @@ impl SkullGame {
             })),
         }?;
         Ok(())
+    }   
+
+    fn draw_entities(&self,frame: &mut glium::Frame)->Result<(),Box<dyn std::error::Error>>{
+        let params = glium::DrawParameters {
+            blend: glium::draw_parameters::Blend::alpha_blending(),
+            ..Default::default()
+        };
+
+        match &self.skull_data {
+            Some(skulls) => Ok(frame.draw(
+                &skulls.skull_vb,
+                &skulls.skull_idxb,
+                &self.programs["skull_program"],
+                &uniform! { tex: &self.textures["skull_textures"], tex_killed: &self.textures["skull_killed_textures"]},
+                &params
+            )?),
+            None => Err(Box::new(opencv::Error {
+                message: "Skull data was not initialized".to_string(),
+                code: 3,
+            })),
+        }?;
+
+        match &self.particle_data {
+            Some(particles) => Ok(frame.draw(
+                &particles.particle_vb,
+                &particles.particle_idxb,
+                &self.programs["particle_program"],
+                &glium::uniforms::EmptyUniforms,
+                &params,
+            )?),
+            None => Err(Box::new(opencv::Error {
+                message: "Particle data was not initialized".to_string(),
+                code: 3,
+            })),
+        }
     }
 }
 
@@ -242,39 +271,9 @@ impl GameTrait for SkullGame {
             display,
         )?);
 
-        //draw moon
-
-        //draw skulls
-        let params = glium::DrawParameters {
-            blend: glium::draw_parameters::Blend::alpha_blending(),
-            ..Default::default()
-        };
-        match &self.skull_data {
-            Some(skulls) => Ok(frame.draw(
-                &skulls.skull_vb,
-                &skulls.skull_idxb,
-                &self.programs["skull_program"],
-                &uniform! { tex: &self.textures["skull_textures"], tex_killed: &self.textures["skull_killed_textures"]},
-                &params
-            )?),
-            None => Err(Box::new(opencv::Error {
-                message: "Skull data was not initialized".to_string(),
-                code: 3,
-            })),
-        }?;
-        match &self.particle_data {
-            Some(particles) => Ok(frame.draw(
-                &particles.particle_vb,
-                &particles.particle_idxb,
-                &self.programs["particle_program"],
-                &glium::uniforms::EmptyUniforms,
-                &params,
-            )?),
-            None => Err(Box::new(opencv::Error {
-                message: "Particle data was not initialized".to_string(),
-                code: 3,
-            })),
-        }
+        //draw everything
+        self.draw_entities(frame)?;
+        Ok(())
     }
     fn key_event(&mut self, _event: &Key) {}
     fn reset(&mut self) {}

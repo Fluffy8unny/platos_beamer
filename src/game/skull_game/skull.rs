@@ -2,7 +2,6 @@ use opencv::{Result, core::Range, prelude::*};
 use rand::{Rng, rng};
 
 use crate::display::display_window::DisplayType;
-use crate::game::skull_game::skull_game::GameEvent;
 use crate::game::skull_game::util::generate_index_for_quad;
 use crate::{display::timestep::TimeStep, game::skull_game::config::SkullSettings};
 
@@ -273,6 +272,11 @@ pub fn update_skull_state(
         skull_idxb,
         skulls: res_vec,
     })
+}
+
+pub enum GameEvent {
+    Killed { pos: (f32, f32), scale: f32 },
+    Escaped { pos: (f32, f32), scale: f32 },
 }
 
 pub struct SkullSpawner {
