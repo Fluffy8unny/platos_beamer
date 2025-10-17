@@ -22,7 +22,7 @@ use glium::texture::Texture2dArray;
 use glium::winit::keyboard::Key;
 
 use std::collections::HashMap;
-
+use std::sync::{Arc, Mutex};
 #[derive(Debug, Clone, Copy)]
 enum GameState{
     PreGame,
@@ -31,7 +31,6 @@ enum GameState{
 }
 
 pub struct SkullGame {
-    game_state: GameState,
     skull_data: Option<SkullData>,
     particle_data: Option<ParticleData>,
     moon_data: Option<MoonData>,
@@ -44,13 +43,13 @@ pub struct SkullGame {
     sound: Option<AudioHandler>,
 
     settings: SkullSettings,
+    game_state: Arc<Mutex<GameState>>,
 }
 
 impl SkullGame {
     pub fn new(config_path: &str) -> Result<SkullGame, Box<dyn std::error::Error>> {
         let settings: SkullSettings = load_config(config_path)?;
         Ok(SkullGame {
-            game_state: GameState::PreGame,
             skull_data: None,
             particle_data: None,
             moon_data: None,
@@ -63,6 +62,7 @@ impl SkullGame {
             mask: None,
             settings,
             sound: None,
+            game_state: Arc::new(Mutex::new(GameState::PreGame)),
         })
     }
 
@@ -278,8 +278,9 @@ impl GameTrait for SkullGame {
                 }
             }
         }
-
-        match self.game_state{
+        
+        let state= *self.game_state.lock().unwrap();
+        match state{
             GameState::PreGame =>{},
             GameState::Game=>{
                 //hit test
@@ -290,6 +291,13 @@ impl GameTrait for SkullGame {
 
                 //draw everything
                 self.draw_entities(frame)?;
+
+                //check for win condition
+                if let Some(moon_d) = self.moon_data.as_ref(){
+                    if moon_d.moon.life == 0_u32{
+                        *self.game_state.lock().unwrap()= GameState::PostGame;
+                    }
+                }
             },
             GameState::PostGame =>{},
         };
@@ -297,14 +305,30 @@ impl GameTrait for SkullGame {
     }
 
     fn key_event(&mut self, event: &Key) {
-        if let GameState::PreGame = self.game_state{
+        let state= *self.game_state.lock().unwrap();
+        if let GameState::PreGame = state{
         match event.as_ref(){
             Key::Character(val) if val.to_lowercase() == self.settings.start_key=> {
-                self.game_state = GameState::Game;
+                *self.game_state.lock().unwrap()= GameState::Game;
             }
             _=>{},
         };
         }
     }
-    fn reset(&mut self) {}
+
+    fn reset(&mut self) {
+                if let Some(moon_d) = self.moon_data.as_mut(){
+                    moon_d.moon.life = moon_d.moon.max_life;
+                }
+
+                if let Some(part_d) = self.particle_data.as_mut(){
+                    part_d.particles.clear();
+                }
+
+                if let Some(skull_d) = self.skull_data.as_mut(){
+                    skull_d.skulls.clear();
+                }
+
+                *self.game_state.lock().unwrap()= GameState::PreGame;
+    }
 }
