@@ -71,6 +71,13 @@ impl SkullGame {
         generate_random_particles_around_point(pos, scale, target, 1.0, color, 0.01, 2000)
     }
 
+    fn get_boxed_opencv_error(name:&str, code: i32)->Box<opencv::Error>{
+            Box::new(opencv::Error {
+                message: format!("{} data was not initialized", name).to_string(),
+                code,
+            })
+    }
+
     fn hit_test(&mut self, timestep: &TimeStep) -> Result<(), Box<dyn std::error::Error>> {
         //get reference to the moon
         let moon_ref: &mut MoonData = self.moon_data.as_mut().ok_or("moon not defined")?;
@@ -113,18 +120,13 @@ impl SkullGame {
                 for particle in particles.particles.iter_mut() {
                     particle.update()
                 }
-
                 self.skull_spawner.maybe_spawn(&mut data.skulls, timestep);
                 Ok(())
             }
-            (_, None) => Err(Box::new(opencv::Error {
-                message: "Particle data was not initialized".to_string(),
-                code: 3,
-            })),
-            (None, _) => Err(Box::new(opencv::Error {
-                message: "Skull data was not initialized".to_string(),
-                code: 3,
-            })),
+            (_, None) => Err(Self::get_boxed_opencv_error("Particle",3)
+            ),
+            (None, _) => Err(Self::get_boxed_opencv_error("Skull", 3)
+            ),
         }?;
         Ok(())
     }
@@ -143,10 +145,7 @@ impl SkullGame {
                     &uniform! {moon_textures: &self.textures["moon_textures"], moon_maks:&self.textures["moon_masks"]},
                     &params)?
             ),
-            None => Err(Box::new(opencv::Error {
-                message: "Moon data was not initialized".to_string(),
-                code: 3,
-            })),
+            None => Err(Self::get_boxed_opencv_error("Moon",3)),
         }?;
 
         match &self.skull_data {
@@ -157,10 +156,7 @@ impl SkullGame {
                 &uniform! { tex: &self.textures["skull_textures"], tex_killed: &self.textures["skull_killed_textures"]},
                 &params
             )?),
-            None => Err(Box::new(opencv::Error {
-                message: "Skull data was not initialized".to_string(),
-                code: 3,
-            })),
+            None => Err(Self::get_boxed_opencv_error("Skull",3)),
         }?;
 
         match &self.particle_data {
@@ -171,11 +167,22 @@ impl SkullGame {
                 &glium::uniforms::EmptyUniforms,
                 &params,
             )?),
-            None => Err(Box::new(opencv::Error {
-                message: "Particle data was not initialized".to_string(),
-                code: 3,
-            })),
+            None => Err(Self::get_boxed_opencv_error("Particle",3)),
         }
+    }
+
+    fn update_dynamic_buffers(&mut self, display:&DisplayType)->Result<(),Box<dyn std::error::Error>>{
+        self.skull_data = Some(update_skull_state(
+            self.skull_data.as_ref().unwrap().skulls.clone(),
+            display,
+        )?);
+
+        self.particle_data = Some(update_particle_state(
+            self.particle_data.as_ref().unwrap().particles.clone(),
+            display,
+        )?);
+        
+        Ok(())
     }
 }
 
@@ -268,17 +275,8 @@ impl GameTrait for SkullGame {
         //hit test
         self.hit_test(timestep)?;
 
-        //todo fix this mess....
-        //update buffer data
-        self.skull_data = Some(update_skull_state(
-            self.skull_data.as_ref().unwrap().skulls.clone(),
-            display,
-        )?);
-
-        self.particle_data = Some(update_particle_state(
-            self.particle_data.as_ref().unwrap().particles.clone(),
-            display,
-        )?);
+        //update vertex/index buffer particle_data
+        self.update_dynamic_buffers(display)?;
 
         //draw everything
         self.draw_entities(frame)?;
