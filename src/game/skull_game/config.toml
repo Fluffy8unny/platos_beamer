@@ -12,6 +12,7 @@ y_start = [-0.5,0.5]
 rot     = [-0.4,0.4]
 skull_shader = "src/shaders/skull_game_skull.toml"
 particle_shader="src/shaders/skull_game_particle.toml"
+moon_shader="src/shaders/skull_game_moon.toml"
 mask_color = [130,70,200]
 skull_alive_textures = [
     "assets/skull/skull_0.png",
@@ -23,4 +24,12 @@ skull_killed_textures= [
     "assets/skull/skull_kill_0.png",
     "assets/skull/skull_kill_1.png",
 ]
+moon_textures= [
+    "assets/moon/moon_texture.png",
+]
+
+moon_masks= [
+    "assets/moon/moon_mask.png",
+]
+
 skull_killed_sound= "assets/sample.mp3"

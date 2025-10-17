@@ -21,8 +21,9 @@ pub struct MoonVertex {
     pub position: [f32; 2],
     pub uv: [f32; 2],
     pub blend_value: f32,
+    pub texture_id: f32,
 }
-implement_vertex!(MoonVertex, position, uv, blend_value,);
+implement_vertex!(MoonVertex, position, uv, texture_id, blend_value,);
 
 pub fn create_moon_vertex_buffer(
     moon: &Moon,
@@ -32,6 +33,7 @@ pub fn create_moon_vertex_buffer(
     let mut moon_vertex_buffer: glium::VertexBuffer<MoonVertex> =
         glium::VertexBuffer::empty_dynamic(display, 4)?;
     let mut moon_ib: Vec<u32> = Vec::with_capacity(4);
+    let blend_value = moon.life as f32 / moon.max_life as f32;
     {
         let moon_vb = &mut moon_vertex_buffer.map();
 
@@ -54,6 +56,11 @@ pub fn create_moon_vertex_buffer(
         moon_vb[3].position[1] = moon.position.1 - moon.scale;
         moon_vb[3].uv[0] = 1_f32;
         moon_vb[3].uv[1] = 0_f32;
+
+        for i in 0..4 {
+            moon_vb[i].texture_id = 0_f32;
+            moon_vb[i].blend_value = blend_value;
+        }
     }
     generate_index_for_quad(0, &mut moon_ib);
     let moon_idxb: glium::IndexBuffer<u32> = glium::IndexBuffer::new(
@@ -75,7 +82,7 @@ impl Moon {
         }
     }
 
-    fn hit(&mut self, damage: u32) {
+    pub fn hit(&mut self, damage: u32) {
         self.life = self.life.saturating_sub(damage);
         if self.life == 0 {
             self.state = MoonState::Dead

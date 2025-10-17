@@ -48,15 +48,16 @@ pub enum GameEvent {
 pub struct SkullGame {
     skull_data: Option<SkullData>,
     particle_data: Option<ParticleData>,
-
     moon_data: Option<MoonData>,
+
     programs: HashMap<&'static str, glium::Program>,
     textures: HashMap<&'static str, Texture2dArray>,
 
     skull_spawner: SkullSpawner,
     mask: Option<Mat>,
-    settings: SkullSettings,
     sound: Option<AudioHandler>,
+
+    settings: SkullSettings,
 }
 
 impl SkullGame {
@@ -172,19 +173,52 @@ impl GameTrait for SkullGame {
         });
 
         //load shaders
-        let skull_program = load_shaders(&self.settings.skull_shader, display)?;
-        let particle_program = load_shaders(&self.settings.particle_shader, display)?;
-        self.programs.insert("skull_program", skull_program);
-        self.programs.insert("particle_program", particle_program);
+        let mut load_shader_helper =
+            |name: &'static str, path: &str| -> Result<(), Box<dyn std::error::Error>> {
+                let program = load_shaders(path, display)?;
+                self.programs.insert(name, program);
+                Ok(())
+            };
 
+        load_shader_helper("skull_program", &self.settings.skull_shader)?;
+        load_shader_helper("particle_program", &self.settings.particle_shader)?;
+        load_shader_helper("moon_program", &self.settings.moon_shader)?;
+        /*
+                let skull_program = load_shaders(&self.settings.skull_shader, display)?;
+                let particle_program = load_shaders(&self.settings.particle_shader, display)?;
+                let moon_program = load_shaders(&self.settings.moon_shader, display)?;
+                self.programs.insert("skull_program", skull_program);
+                self.programs.insert("particle_program", particle_program);
+                self.programs.insert("moon_program", moon_program);
+        */
         //load textures
+
+        let mut load_texture_helper =
+            |name: &'static str, path| -> Result<(), Box<dyn std::error::Error>> {
+                let tex = load_texture(path, self.settings.mask_color, display)?;
+                self.textures.insert(name, tex);
+                Ok(())
+            };
+        load_texture_helper("moon_textures", &self.settings.moon_textures)?;
+        load_texture_helper("moon_masks", &self.settings.moon_masks)?;
+        load_texture_helper("skull_textures", &self.settings.skull_alive_textures)?;
+        load_texture_helper(
+            "skull_killed_textures",
+            &self.settings.skull_killed_textures,
+        )?;
+
+        /*
         let load_texture_helper = |path| load_texture(path, self.settings.mask_color, display);
         let skull_texture = load_texture_helper(&self.settings.skull_alive_textures)?;
         let skull_killed_texture = load_texture_helper(&self.settings.skull_killed_textures)?;
+        let moon_textures = load_texture_helper(&self.settings.moon_textures)?;
+        let moon_masks = load_texture_helper(&self.settings.moon_masks)?;
+        self.textures.insert("moon_textures", moon_textures);
+        self.textures.insert("moon_mask", moon_masks);
         self.textures.insert("skull_textures", skull_texture);
         self.textures
             .insert("skull_killed_textures", skull_killed_texture);
-
+            */
         //create statefull entitites
         self.skull_data = Some(update_skull_state(
             Vec::with_capacity(self.settings.max_number),
@@ -230,13 +264,7 @@ impl GameTrait for SkullGame {
             }
         }
         //get reference to the moon
-        let moon_position = self
-            .moon_data
-            .as_ref()
-            .ok_or("moon not defined")?
-            .moon
-            .position;
-        //draw moon
+        let moon_ref = self.moon_data.as_ref().ok_or("moon not defined")?;
 
         //update skulls
         match (&mut self.skull_data, &mut self.particle_data) {
@@ -247,7 +275,7 @@ impl GameTrait for SkullGame {
                             particles.particles.append(&mut spawn_particles_for_skull(
                                 pos,
                                 scale,
-                                moon_position,
+                                moon_ref.moon.position,
                                 (0.0, 1.0, 1.0),
                             ));
                             self.sound
@@ -302,6 +330,8 @@ impl GameTrait for SkullGame {
             self.particle_data.as_ref().unwrap().particles.clone(),
             display,
         )?);
+
+        //draw moon
 
         //draw skulls
         let params = glium::DrawParameters {
