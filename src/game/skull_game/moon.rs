@@ -1,3 +1,4 @@
+use ::glium::{IndexBuffer, VertexBuffer};
 use glium::implement_vertex;
 
 use crate::{
@@ -38,24 +39,24 @@ pub fn create_moon_vertex_buffer(
         let moon_vb = &mut moon_vertex_buffer.map();
 
         moon_vb[0].position[0] = moon.position.0 - moon.scale;
-        moon_vb[0].position[1] = moon.position.1 - moon.scale;
+        moon_vb[0].position[1] = moon.position.1 + moon.scale;
         moon_vb[0].uv[0] = 0_f32;
         moon_vb[0].uv[1] = 0_f32;
 
-        moon_vb[1].position[0] = moon.position.0 - moon.scale;
+        moon_vb[1].position[0] = moon.position.0 + moon.scale;
         moon_vb[1].position[1] = moon.position.1 + moon.scale;
-        moon_vb[1].uv[0] = 0_f32;
-        moon_vb[1].uv[1] = 1_f32;
+        moon_vb[1].uv[0] = 1_f32;
+        moon_vb[1].uv[1] = 0_f32;
 
-        moon_vb[2].position[0] = moon.position.0 + moon.scale;
-        moon_vb[2].position[1] = moon.position.1 + moon.scale;
-        moon_vb[2].uv[0] = 1_f32;
+        moon_vb[2].position[0] = moon.position.0 - moon.scale;
+        moon_vb[2].position[1] = moon.position.1 - moon.scale;
+        moon_vb[2].uv[0] = 0_f32;
         moon_vb[2].uv[1] = 1_f32;
 
         moon_vb[3].position[0] = moon.position.0 + moon.scale;
         moon_vb[3].position[1] = moon.position.1 - moon.scale;
         moon_vb[3].uv[0] = 1_f32;
-        moon_vb[3].uv[1] = 0_f32;
+        moon_vb[3].uv[1] = 1_f32;
 
         for i in 0..4 {
             moon_vb[i].texture_id = 0_f32;
@@ -88,4 +89,10 @@ impl Moon {
             self.state = MoonState::Dead
         };
     }
+}
+
+pub struct MoonData {
+    pub moon_vb: VertexBuffer<MoonVertex>,
+    pub moon_idxb: IndexBuffer<u32>,
+    pub moon: Moon,
 }

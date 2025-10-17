@@ -4,30 +4,24 @@ use crate::display::{display_window::DisplayType, timestep::TimeStep};
 use crate::PlatoConfig;
 use crate::game::load_shaders;
 use crate::game::skull_game::config::SkullSettings;
-use crate::game::skull_game::moon::{Moon, MoonVertex, create_moon_vertex_buffer};
+use crate::game::skull_game::moon::{Moon, MoonData, create_moon_vertex_buffer};
 use crate::game::skull_game::particle::{
     Particle, ParticleData, Target, generate_random_particles_around_point,
     generate_random_repulsed_particles_around_point, update_particle_state,
 };
 use crate::game::skull_game::position_visualization::spawn_based_on_mask;
-use crate::game::skull_game::skull::{SkullData, SkullSpawner,GameEvent, update_skull_state};
+use crate::game::skull_game::skull::{GameEvent, SkullData, SkullSpawner, update_skull_state};
 use crate::game::skull_game::util::load_texture;
 use crate::game::sound::{AudioHandler, SoundType};
 use crate::types::game_types::GameTrait;
 
 use opencv::prelude::*;
 
-use ::glium::{IndexBuffer, Surface, VertexBuffer, uniform};
+use ::glium::{Surface, uniform};
 use glium::texture::Texture2dArray;
 use glium::winit::keyboard::Key;
 
 use std::collections::HashMap;
-
-struct MoonData {
-    moon_vb: VertexBuffer<MoonVertex>,
-    moon_idxb: IndexBuffer<u32>,
-    moon: Moon,
-}
 pub struct SkullGame {
     skull_data: Option<SkullData>,
     particle_data: Option<ParticleData>,
@@ -71,7 +65,7 @@ impl SkullGame {
         let target = Target {
             center: target_pos,
             gravity: 3.5,
-            size: 0.1,
+            size: 0.2,
         };
         generate_random_particles_around_point(pos, scale, target, 1.0, color, 0.01, 2000)
     }
@@ -132,13 +126,27 @@ impl SkullGame {
             })),
         }?;
         Ok(())
-    }   
+    }
 
-    fn draw_entities(&self,frame: &mut glium::Frame)->Result<(),Box<dyn std::error::Error>>{
+    fn draw_entities(&self, frame: &mut glium::Frame) -> Result<(), Box<dyn std::error::Error>> {
         let params = glium::DrawParameters {
             blend: glium::draw_parameters::Blend::alpha_blending(),
             ..Default::default()
         };
+
+        match &self.moon_data{
+            Some( moon) => Ok( frame.draw( 
+                    &moon.moon_vb,
+                    &moon.moon_idxb, 
+                    &self.programs["moon_program"], 
+                    &uniform! {moon_textures: &self.textures["moon_textures"], moon_maks:&self.textures["moon_masks"]},
+                    &params)?
+            ),
+            None => Err(Box::new(opencv::Error {
+                message: "Moon data was not initialized".to_string(),
+                code: 3,
+            })),
+        }?;
 
         match &self.skull_data {
             Some(skulls) => Ok(frame.draw(
@@ -176,7 +184,7 @@ impl GameTrait for SkullGame {
         display: &DisplayType,
         config: PlatoConfig,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let moon = Moon::new(100, (0_f32, 0_f32), 0.2);
+        let moon = Moon::new(100, (0_f32, 0_f32), 0.5);
         let (moon_vb, moon_idxb) = create_moon_vertex_buffer(&moon, display)?;
         self.moon_data = Some(MoonData {
             moon_vb,

@@ -38,6 +38,6 @@ fragment="""
            float blend_x = (1.0 - abs(v_uv_coords.x));
            float blend_y = (1.0 - abs(v_uv_coords.y));
            float blend = 0.2*v_blend_value*(blend_x*blend_x + blend_y*blend_y);
-           color =  vec4(v_color,blend);
+           color =  vec4(1.0,0.0,0.0,1.0);
          }
       """
