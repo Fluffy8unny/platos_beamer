@@ -38,6 +38,8 @@ fragment="""
            float blend_x = (1.0 - abs(v_uv_coords.x));
            float blend_y = (1.0 - abs(v_uv_coords.y));
            float blend = 0.2*v_blend_value*(blend_x*blend_x + blend_y*blend_y);
-           color =  vec4(1.0,0.0,0.0,1.0);
+           vec4 moon_tex = texture(moon_textures, vec3(v_uv_coords, v_texture_id));
+           vec4 mask_tex = texture(moon_masks, vec3(v_uv_coords, v_texture_id));
+           color =  vec4(moon_tex.xyz,1.0);
          }
       """

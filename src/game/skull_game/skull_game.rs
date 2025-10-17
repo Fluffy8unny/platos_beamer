@@ -22,6 +22,7 @@ use glium::texture::Texture2dArray;
 use glium::winit::keyboard::Key;
 
 use std::collections::HashMap;
+
 pub struct SkullGame {
     skull_data: Option<SkullData>,
     particle_data: Option<ParticleData>,
@@ -135,7 +136,7 @@ impl SkullGame {
         };
 
         match &self.moon_data{
-            Some( moon) => Ok( frame.draw( 
+            Some( moon) => Ok( frame.draw(
                     &moon.moon_vb,
                     &moon.moon_idxb, 
                     &self.programs["moon_program"], 
