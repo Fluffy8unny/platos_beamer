@@ -22,4 +22,5 @@ pub struct SkullSettings {
     pub skull_alive_textures: Vec<String>,
     pub skull_killed_textures: Vec<String>,
     pub skull_killed_sound: String,
+    pub start_key: String,
 }

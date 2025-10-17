@@ -33,3 +33,4 @@ moon_masks= [
 ]
 
 skull_killed_sound= "assets/sample.mp3"
+start_key = "s"

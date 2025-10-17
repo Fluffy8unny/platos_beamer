@@ -23,7 +23,15 @@ use glium::winit::keyboard::Key;
 
 use std::collections::HashMap;
 
+#[derive(Debug, Clone, Copy)]
+enum GameState{
+    PreGame,
+    Game,
+    PostGame,
+}
+
 pub struct SkullGame {
+    game_state: GameState,
     skull_data: Option<SkullData>,
     particle_data: Option<ParticleData>,
     moon_data: Option<MoonData>,
@@ -42,6 +50,7 @@ impl SkullGame {
     pub fn new(config_path: &str) -> Result<SkullGame, Box<dyn std::error::Error>> {
         let settings: SkullSettings = load_config(config_path)?;
         Ok(SkullGame {
+            game_state: GameState::PreGame,
             skull_data: None,
             particle_data: None,
             moon_data: None,
@@ -270,16 +279,32 @@ impl GameTrait for SkullGame {
             }
         }
 
-        //hit test
-        self.hit_test(timestep)?;
+        match self.game_state{
+            GameState::PreGame =>{},
+            GameState::Game=>{
+                //hit test
+                self.hit_test(timestep)?;
 
-        //update vertex/index buffer particle_data
-        self.update_dynamic_buffers(display)?;
+                //update vertex/index buffer particle_data
+                self.update_dynamic_buffers(display)?;
 
-        //draw everything
-        self.draw_entities(frame)?;
+                //draw everything
+                self.draw_entities(frame)?;
+            },
+            GameState::PostGame =>{},
+        };
         Ok(())
     }
-    fn key_event(&mut self, _event: &Key) {}
+
+    fn key_event(&mut self, event: &Key) {
+        if let GameState::PreGame = self.game_state{
+        match event.as_ref(){
+            Key::Character(val) if val.to_lowercase() == self.settings.start_key=> {
+                self.game_state = GameState::Game;
+            }
+            _=>{},
+        };
+        }
+    }
     fn reset(&mut self) {}
 }

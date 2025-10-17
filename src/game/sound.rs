@@ -6,7 +6,6 @@ use rodio::{
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
-use std::sync::{Arc, Mutex};
 
 pub type SoundSource = Buffered<Decoder<BufReader<File>>>;
 pub type SoundSourceResult = Result<SoundSource, Box<dyn std::error::Error>>;
@@ -55,7 +54,7 @@ impl AudioHandler {
         }
     }
 
-    pub fn start_repeating_music(
+    pub fn start_bgm(
         &mut self,
         name: String,
     ) -> Result<(), Box<dyn std::error::Error>> {
