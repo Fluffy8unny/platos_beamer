@@ -291,25 +291,26 @@ impl GameTrait for SkullGame {
 
                 //draw everything
                 self.draw_entities(frame)?;
-
                 //check for win condition
                 if let Some(moon_d) = self.moon_data.as_ref(){
                     if moon_d.moon.life == 0_u32{
-                        *self.game_state.lock().unwrap()= GameState::PostGame;
+                        *self.game_state.lock().unwrap() = GameState::PostGame;
                     }
                 }
             },
             GameState::PostGame =>{},
         };
+
         Ok(())
+
     }
 
     fn key_event(&mut self, event: &Key) {
-        let state= *self.game_state.lock().unwrap();
-        if let GameState::PreGame = state{
+        let mut state= self.game_state.lock().unwrap();
+        if let GameState::PreGame = *state{
         match event.as_ref(){
             Key::Character(val) if val.to_lowercase() == self.settings.start_key=> {
-                *self.game_state.lock().unwrap()= GameState::Game;
+                *state= GameState::Game;
             }
             _=>{},
         };
