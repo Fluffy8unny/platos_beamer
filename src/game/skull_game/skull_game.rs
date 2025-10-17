@@ -24,7 +24,7 @@ use glium::winit::keyboard::Key;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 #[derive(Debug, Clone, Copy)]
-enum GameState{
+enum GameState {
     PreGame,
     Game,
     PostGame,
@@ -80,11 +80,11 @@ impl SkullGame {
         generate_random_particles_around_point(pos, scale, target, 1.0, color, 0.01, 2000)
     }
 
-    fn get_boxed_opencv_error(name:&str, code: i32)->Box<opencv::Error>{
-            Box::new(opencv::Error {
-                message: format!("{} data was not initialized", name).to_string(),
-                code,
-            })
+    fn get_boxed_opencv_error(name: &str, code: i32) -> Box<opencv::Error> {
+        Box::new(opencv::Error {
+            message: format!("{} data was not initialized", name).to_string(),
+            code,
+        })
     }
 
     fn hit_test(&mut self, timestep: &TimeStep) -> Result<(), Box<dyn std::error::Error>> {
@@ -130,10 +130,8 @@ impl SkullGame {
                 self.skull_spawner.maybe_spawn(&mut data.skulls, timestep);
                 Ok(())
             }
-            (_, None) => Err(Self::get_boxed_opencv_error("Particle",3)
-            ),
-            (None, _) => Err(Self::get_boxed_opencv_error("Skull", 3)
-            ),
+            (_, None) => Err(Self::get_boxed_opencv_error("Particle", 3)),
+            (None, _) => Err(Self::get_boxed_opencv_error("Skull", 3)),
         }?;
         Ok(())
     }
@@ -174,11 +172,14 @@ impl SkullGame {
                 &glium::uniforms::EmptyUniforms,
                 &params,
             )?),
-            None => Err(Self::get_boxed_opencv_error("Particle",3)),
+            None => Err(Self::get_boxed_opencv_error("Particle", 3)),
         }
     }
 
-    fn update_dynamic_buffers(&mut self, display:&DisplayType)->Result<(),Box<dyn std::error::Error>>{
+    fn update_dynamic_buffers(
+        &mut self,
+        display: &DisplayType,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         self.skull_data = Some(update_skull_state(
             self.skull_data.as_ref().unwrap().skulls.clone(),
             display,
@@ -188,7 +189,7 @@ impl SkullGame {
             self.particle_data.as_ref().unwrap().particles.clone(),
             display,
         )?);
-        
+
         Ok(())
     }
 }
@@ -278,11 +279,12 @@ impl GameTrait for SkullGame {
                 }
             }
         }
-        
-        let state= *self.game_state.lock().unwrap();
-        match state{
-            GameState::PreGame =>{},
-            GameState::Game=>{
+
+        let state_mut = self.game_state.clone();
+        let mut state = state_mut.lock().unwrap();
+        match *state {
+            GameState::PreGame => {}
+            GameState::Game => {
                 //hit test
                 self.hit_test(timestep)?;
 
@@ -292,44 +294,42 @@ impl GameTrait for SkullGame {
                 //draw everything
                 self.draw_entities(frame)?;
                 //check for win condition
-                if let Some(moon_d) = self.moon_data.as_ref(){
-                    if moon_d.moon.life == 0_u32{
-                        *self.game_state.lock().unwrap() = GameState::PostGame;
+                if let Some(moon_d) = self.moon_data.as_ref() {
+                    if moon_d.moon.life == 0_u32 {
+                        *state = GameState::PostGame;
                     }
                 }
-            },
-            GameState::PostGame =>{},
+            }
+            GameState::PostGame => {}
         };
-
         Ok(())
-
     }
 
     fn key_event(&mut self, event: &Key) {
-        let mut state= self.game_state.lock().unwrap();
-        if let GameState::PreGame = *state{
-        match event.as_ref(){
-            Key::Character(val) if val.to_lowercase() == self.settings.start_key=> {
-                *state= GameState::Game;
-            }
-            _=>{},
-        };
+        let mut state = self.game_state.lock().unwrap();
+        if let GameState::PreGame = *state {
+            match event.as_ref() {
+                Key::Character(val) if val.to_lowercase() == self.settings.start_key => {
+                    *state = GameState::Game;
+                }
+                _ => {}
+            };
         }
     }
 
     fn reset(&mut self) {
-                if let Some(moon_d) = self.moon_data.as_mut(){
-                    moon_d.moon.life = moon_d.moon.max_life;
-                }
+        if let Some(moon_d) = self.moon_data.as_mut() {
+            moon_d.moon.life = moon_d.moon.max_life;
+        }
 
-                if let Some(part_d) = self.particle_data.as_mut(){
-                    part_d.particles.clear();
-                }
+        if let Some(part_d) = self.particle_data.as_mut() {
+            part_d.particles.clear();
+        }
 
-                if let Some(skull_d) = self.skull_data.as_mut(){
-                    skull_d.skulls.clear();
-                }
+        if let Some(skull_d) = self.skull_data.as_mut() {
+            skull_d.skulls.clear();
+        }
 
-                *self.game_state.lock().unwrap()= GameState::PreGame;
+        *self.game_state.lock().unwrap() = GameState::PreGame;
     }
 }

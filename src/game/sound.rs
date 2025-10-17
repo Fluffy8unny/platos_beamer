@@ -1,7 +1,7 @@
 use crate::config::SoundConfig;
 use rodio::{
-    source::{Buffered, Repeat, Source, Stoppable},
     Decoder, OutputStream, OutputStreamBuilder, Sink,
+    source::{Buffered, Repeat, Source, Stoppable},
 };
 use std::collections::HashMap;
 use std::fs::File;
@@ -54,10 +54,7 @@ impl AudioHandler {
         }
     }
 
-    pub fn start_bgm(
-        &mut self,
-        name: String,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn start_bgm(&mut self, name: String) -> Result<(), Box<dyn std::error::Error>> {
         self.stop_bgm();
         let repeating_source = match self
             .sounds
