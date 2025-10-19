@@ -26,11 +26,9 @@ skull_killed_textures= [
 ]
 moon_textures= [
     "assets/moon/moon_texture.png",
-]
-
-moon_masks= [
     "assets/moon/moon_mask.png",
 ]
+
 
 skull_killed_sound= "assets/sample.mp3"
 start_key = "s"

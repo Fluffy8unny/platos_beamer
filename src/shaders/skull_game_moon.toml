@@ -29,7 +29,6 @@ fragment="""
       in float v_texture_id;
 
       uniform sampler2DArray moon_textures;
-      uniform sampler2DArray moon_masks;
 
       out float v_blend_value;
       out vec4 color;
@@ -39,7 +38,7 @@ fragment="""
            float blend_y = (1.0 - abs(v_uv_coords.y));
            float blend = 0.2*v_blend_value*(blend_x*blend_x + blend_y*blend_y);
            vec4 moon_tex = texture(moon_textures, vec3(v_uv_coords, v_texture_id));
-           vec4 mask_tex = texture(moon_masks, vec3(v_uv_coords, v_texture_id));
+           vec4 mask_tex = texture(moon_textures, vec3(v_uv_coords, 0.0));
            color =  vec4(mask_tex.xyz,1.0);
          }
       """

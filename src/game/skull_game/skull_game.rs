@@ -142,15 +142,15 @@ impl SkullGame {
             ..Default::default()
         };
 
-        match &self.moon_data{
-            Some( moon) => Ok( frame.draw(
-                    &moon.moon_vb,
-                    &moon.moon_idxb, 
-                    &self.programs["moon_program"], 
-                    &uniform! {moon_textures: &self.textures["moon_textures"], moon_maks:&self.textures["moon_masks"]},
-                    &params)?
-            ),
-            None => Err(Self::get_boxed_opencv_error("Moon",3)),
+        match &self.moon_data {
+            Some(moon) => Ok(frame.draw(
+                &moon.moon_vb,
+                &moon.moon_idxb,
+                &self.programs["moon_program"],
+                &uniform! {moon_textures: &self.textures["moon_textures"]},
+                &params,
+            )?),
+            None => Err(Self::get_boxed_opencv_error("Moon", 3)),
         }?;
 
         match &self.skull_data {
@@ -228,7 +228,6 @@ impl GameTrait for SkullGame {
                 Ok(())
             };
         load_texture_helper("moon_textures", &self.settings.moon_textures)?;
-        load_texture_helper("moon_masks", &self.settings.moon_masks)?;
         load_texture_helper("skull_textures", &self.settings.skull_alive_textures)?;
         load_texture_helper(
             "skull_killed_textures",

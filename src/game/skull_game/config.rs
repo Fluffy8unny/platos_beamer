@@ -18,7 +18,6 @@ pub struct SkullSettings {
     pub particle_shader: String,
     pub moon_shader: String,
     pub moon_textures: Vec<String>,
-    pub moon_masks: Vec<String>,
     pub skull_alive_textures: Vec<String>,
     pub skull_killed_textures: Vec<String>,
     pub skull_killed_sound: String,
