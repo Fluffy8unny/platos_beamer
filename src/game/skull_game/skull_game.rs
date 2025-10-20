@@ -29,7 +29,15 @@ enum GameState {
     Game,
     PostGame,
 }
-
+struct DiffcultySelector{
+    player_damage: u32,
+    escape_penalty: u32,
+}
+impl DiffcultySelector{
+    pub fn default()->DiffcultySelector{
+        DiffcultySelector{player_damage:1,escape_penalty:1}
+    }
+}
 pub struct SkullGame {
     skull_data: Option<SkullData>,
     particle_data: Option<ParticleData>,
@@ -43,6 +51,7 @@ pub struct SkullGame {
     sound: Option<AudioHandler>,
 
     settings: SkullSettings,
+    difficultiy: DiffcultySelector,
     game_state: Arc<Mutex<GameState>>,
 }
 
@@ -62,6 +71,7 @@ impl SkullGame {
             mask: None,
             settings,
             sound: None,
+            difficultiy: DiffcultySelector::default(),
             game_state: Arc::new(Mutex::new(GameState::PreGame)),
         })
     }
@@ -105,7 +115,7 @@ impl SkullGame {
                                     moon_ref.moon.position,
                                     (0.0, 1.0, 1.0),
                                 ));
-                            moon_ref.moon.hit(1);
+                            moon_ref.moon.hit(self.difficultiy.player_damage);
                             sound_ref.play("killed", SoundType::Sfx)?;
                         }
                         Some(GameEvent::Escaped { pos, scale }) => {
@@ -119,6 +129,7 @@ impl SkullGame {
                                     800,
                                 ),
                             );
+                            moon_ref.moon.heal(self.difficultiy.escape_penalty);
                             sound_ref.play("killed", SoundType::Sfx)?;
                         }
                         None => {}
@@ -311,6 +322,13 @@ impl GameTrait for SkullGame {
         let mut state = self.game_state.lock().unwrap();
         if let GameState::PreGame = *state {
             match event.as_ref() {
+
+                Key::Character("1")=> {
+                    self.difficultiy = DiffcultySelector::default();
+                },
+                Key::Character("2")=> {
+                    self.difficultiy = DiffcultySelector{player_damage:5, escape_penalty:0};
+                },
                 Key::Character(val) if val.to_lowercase() == self.settings.start_key => {
                     *state = GameState::Game;
                 }

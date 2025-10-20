@@ -90,11 +90,15 @@ impl Moon {
         self.timer.update();
         self.timer.runtime
     }
+
     pub fn hit(&mut self, damage: u32) {
         self.life = self.life.saturating_sub(damage);
         if self.life == 0 {
             self.state = MoonState::Dead
         };
+    }
+    pub fn heal(&mut self, healing: u32) {
+        self.life = self.life.saturating_add(healing).clamp(0_u32, self.max_life);
     }
 }
 
