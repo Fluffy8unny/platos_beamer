@@ -1,10 +1,9 @@
 use opencv::core::{Point, find_non_zero};
 use opencv::prelude::*;
-use rand::seq::{IndexedRandom, SliceRandom};
+use rand::seq::IndexedRandom;
+use rand::{Rng, rng};
 
-use crate::game::skull_game::particle::{
-    Particle, Target, update_gravity_particle, update_linear_particle,
-};
+use crate::game::skull_game::particle::{Particle, Target, update_linear_particle};
 fn convert_opencv_to_opengl_coords(pos: i32, dim: i32) -> f32 {
     let rel_pos = (pos as f32) / (dim as f32); //[0,1]
     2_f32 * rel_pos - 1.0_f32
@@ -22,6 +21,7 @@ pub fn spawn_based_on_mask(
     let mut positions = Mat::default();
     find_non_zero(&mask, &mut positions)?;
 
+    let mut randomizer = rng();
     let particle_vector: Vec<Particle> = (0_i32..positions.rows())
         .map(|i| -> Result<Particle, Box<dyn std::error::Error>> {
             let pos = positions.at::<Point>(i)?;
@@ -32,12 +32,13 @@ pub fn spawn_based_on_mask(
                 size: 0.1,
             };
 
+            let v = randomizer.random_range(0.7_f32..1.3_f32);
             Ok(Particle::new(
                 gl_pos,
                 0.025,
                 (1.0, 0.5, 1.0),
                 1.0,
-                (0.0, 0.7),
+                (0.0, v),
                 target,
                 update_linear_particle,
             ))

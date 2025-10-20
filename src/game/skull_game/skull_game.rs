@@ -136,18 +136,21 @@ impl SkullGame {
         Ok(())
     }
 
-    fn draw_entities(&self, frame: &mut glium::Frame) -> Result<(), Box<dyn std::error::Error>> {
+    fn draw_entities(
+        &mut self,
+        frame: &mut glium::Frame,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let params = glium::DrawParameters {
             blend: glium::draw_parameters::Blend::alpha_blending(),
             ..Default::default()
         };
 
-        match &self.moon_data {
+        match &mut self.moon_data {
             Some(moon) => Ok(frame.draw(
                 &moon.moon_vb,
                 &moon.moon_idxb,
                 &self.programs["moon_program"],
-                &uniform! {moon_textures: &self.textures["moon_textures"]},
+                &uniform! {moon_textures: &self.textures["moon_textures"],time:(moon.moon.get_time()/1000_f32)%5_f32},
                 &params,
             )?),
             None => Err(Self::get_boxed_opencv_error("Moon", 3)),

@@ -1,6 +1,7 @@
 use ::glium::{IndexBuffer, VertexBuffer};
 use glium::implement_vertex;
 
+use crate::display::timestep::TimeStep;
 use crate::{
     display::display_window::DisplayType, game::skull_game::util::generate_index_for_quad,
 };
@@ -15,6 +16,7 @@ pub struct Moon {
     pub life: u32,
     pub max_life: u32,
     pub state: MoonState,
+    timer: TimeStep,
 }
 
 #[derive(Copy, Clone)]
@@ -80,9 +82,14 @@ impl Moon {
             state: MoonState::Alive,
             position,
             scale,
+            timer: TimeStep::new(),
         }
     }
 
+    pub fn get_time(&mut self) -> f32 {
+        self.timer.update();
+        self.timer.runtime
+    }
     pub fn hit(&mut self, damage: u32) {
         self.life = self.life.saturating_sub(damage);
         if self.life == 0 {
