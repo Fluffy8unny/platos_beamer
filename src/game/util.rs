@@ -1,6 +1,7 @@
-use crate::config::{ShaderConfig, load_config};
+use crate::config::{load_config, ShaderConfig};
 use crate::display::display_window::DisplayType;
-use opencv::imgproc::{COLOR_BGR2GRAY, cvt_color};
+use image::ImageReader;
+use opencv::imgproc::{cvt_color, COLOR_BGR2GRAY};
 use opencv::prelude::*;
 
 pub fn load_shaders(
@@ -15,6 +16,17 @@ pub fn load_shaders(
         &shaders.fragment,
         None,
     )?)
+}
+
+pub fn load_rgb_image_as_texture(
+    path: &str,
+    display: &DisplayType,
+) -> Result<glium::Texture2d, Box<dyn std::error::Error>> {
+    let image = ImageReader::open(path)?.decode()?.to_rgba8();
+    let image_dimensions = image.dimensions();
+    let image =
+        glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
+    Ok(glium::texture::Texture2d::new(display, image)?)
 }
 
 pub fn image_to_gray_texture_r(

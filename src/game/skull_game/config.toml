@@ -1,6 +1,5 @@
 spawn_rate = 0.5
-crystal_position = [0.0,-0.5]
-max_number = 500
+max_number = 50
 scale_speed   = 0.1
 move_speed    = 0.15
 start_scale = 0.1
@@ -13,6 +12,8 @@ rot     = [-0.4,0.4]
 skull_shader = "src/shaders/skull_game_skull.toml"
 particle_shader="src/shaders/skull_game_particle.toml"
 moon_shader="src/shaders/skull_game_moon.toml"
+victory_shader="src/shaders/skull_game_victory.toml"
+
 mask_color = [130,70,200]
 skull_alive_textures = [
     "assets/skull/skull_0.png",
@@ -20,15 +21,19 @@ skull_alive_textures = [
     "assets/skull/skull_2.png",
     "assets/skull/skull_3.png",
 ]
+
 skull_killed_textures= [
     "assets/skull/skull_kill_0.png",
     "assets/skull/skull_kill_1.png",
 ]
+
 moon_textures= [
     "assets/moon/moon_texture.png",
     "assets/moon/moon_mask.png",
 ]
 
+victory_texture = "assets/victory.png"
 
-skull_killed_sound= "assets/sample.mp3"
+skull_killed_sound= "assets/killed.mp3"
+skull_escaped_sound = "assets/escape.mp3"
 start_key = "s"

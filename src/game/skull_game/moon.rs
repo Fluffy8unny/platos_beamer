@@ -12,6 +12,7 @@ pub enum MoonState {
 }
 pub struct Moon {
     pub position: (f32, f32),
+    pub max_position: (f32,f32),
     pub scale: f32,
     pub life: u32,
     pub max_life: u32,
@@ -36,27 +37,29 @@ pub fn create_moon_vertex_buffer(
     let mut moon_vertex_buffer: glium::VertexBuffer<MoonVertex> =
         glium::VertexBuffer::empty_dynamic(display, 4)?;
     let mut moon_ib: Vec<u32> = Vec::with_capacity(4);
-    let blend_value = moon.life as f32 / moon.max_life as f32;
+    let blend_value = moon.get_life_fraction();
+    let dpos = (moon.max_position.0-moon.position.0,moon.max_position.1-moon.position.1);
+    let position = (blend_value*dpos.0+moon.position.0,blend_value*dpos.1+moon.position.1);
     {
         let moon_vb = &mut moon_vertex_buffer.map();
 
-        moon_vb[0].position[0] = moon.position.0 - moon.scale;
-        moon_vb[0].position[1] = moon.position.1 + moon.scale;
+        moon_vb[0].position[0] = position.0 - moon.scale;
+        moon_vb[0].position[1] = position.1 + moon.scale;
         moon_vb[0].uv[0] = 0_f32;
         moon_vb[0].uv[1] = 0_f32;
 
-        moon_vb[1].position[0] = moon.position.0 + moon.scale;
-        moon_vb[1].position[1] = moon.position.1 + moon.scale;
+        moon_vb[1].position[0] = position.0 + moon.scale;
+        moon_vb[1].position[1] = position.1 + moon.scale;
         moon_vb[1].uv[0] = 1_f32;
         moon_vb[1].uv[1] = 0_f32;
 
-        moon_vb[2].position[0] = moon.position.0 - moon.scale;
-        moon_vb[2].position[1] = moon.position.1 - moon.scale;
+        moon_vb[2].position[0] = position.0 - moon.scale;
+        moon_vb[2].position[1] = position.1 - moon.scale;
         moon_vb[2].uv[0] = 0_f32;
         moon_vb[2].uv[1] = 1_f32;
 
-        moon_vb[3].position[0] = moon.position.0 + moon.scale;
-        moon_vb[3].position[1] = moon.position.1 - moon.scale;
+        moon_vb[3].position[0] = position.0 + moon.scale;
+        moon_vb[3].position[1] = position.1 - moon.scale;
         moon_vb[3].uv[0] = 1_f32;
         moon_vb[3].uv[1] = 1_f32;
 
@@ -75,15 +78,20 @@ pub fn create_moon_vertex_buffer(
 }
 
 impl Moon {
-    pub fn new(starting_life: u32, position: (f32, f32), scale: f32) -> Self {
+    pub fn new(starting_life: u32, position: (f32, f32), max_position:(f32,f32),scale: f32) -> Self {
         Moon {
             life: starting_life,
             max_life: starting_life,
             state: MoonState::Alive,
             position,
+            max_position,
             scale,
             timer: TimeStep::new(),
         }
+    }
+
+    pub fn get_life_fraction(&self)->f32{
+    self.life as f32 / self.max_life as f32
     }
 
     pub fn get_time(&mut self) -> f32 {

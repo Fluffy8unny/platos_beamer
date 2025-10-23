@@ -22,7 +22,7 @@ fragment="""
       out vec4 color;
       
       void main(){ 
-         float val = texture(tex, vec2(uv_coords.x, uv_coords.y)).x;   
-           color =  vec4(val,val,val,1.0);
+         vec4 val = texture(tex, vec2(uv_coords.x, uv_coords.y));   
+          color =  val;
       }
       """
