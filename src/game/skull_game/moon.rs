@@ -2,17 +2,21 @@ use ::glium::{IndexBuffer, VertexBuffer};
 use glium::implement_vertex;
 
 use crate::display::timestep::TimeStep;
+use crate::game::skull_game::{moon, position_visualization};
 use crate::{
     display::display_window::DisplayType, game::skull_game::util::generate_index_for_quad,
 };
 
+#[derive(Copy, Clone)]
 pub enum MoonState {
     Alive,
     Dead,
 }
+
+#[derive(Copy, Clone)]
 pub struct Moon {
     pub position: (f32, f32),
-    pub max_position: (f32,f32),
+    pub max_position: (f32, f32),
     pub scale: f32,
     pub life: u32,
     pub max_life: u32,
@@ -38,8 +42,7 @@ pub fn create_moon_vertex_buffer(
         glium::VertexBuffer::empty_dynamic(display, 4)?;
     let mut moon_ib: Vec<u32> = Vec::with_capacity(4);
     let blend_value = moon.get_life_fraction();
-    let dpos = (moon.max_position.0-moon.position.0,moon.max_position.1-moon.position.1);
-    let position = (blend_value*dpos.0+moon.position.0,blend_value*dpos.1+moon.position.1);
+    let position = moon.get_position();
     {
         let moon_vb = &mut moon_vertex_buffer.map();
 
@@ -78,7 +81,12 @@ pub fn create_moon_vertex_buffer(
 }
 
 impl Moon {
-    pub fn new(starting_life: u32, position: (f32, f32), max_position:(f32,f32),scale: f32) -> Self {
+    pub fn new(
+        starting_life: u32,
+        position: (f32, f32),
+        max_position: (f32, f32),
+        scale: f32,
+    ) -> Self {
         Moon {
             life: starting_life,
             max_life: starting_life,
@@ -90,8 +98,20 @@ impl Moon {
         }
     }
 
-    pub fn get_life_fraction(&self)->f32{
-    self.life as f32 / self.max_life as f32
+    pub fn get_position(&self) -> (f32, f32) {
+        let blend_value = self.get_life_fraction();
+        let dpos = (
+            self.max_position.0 - self.position.0,
+            self.max_position.1 - self.position.1,
+        );
+        (
+            blend_value * dpos.0 + self.position.0,
+            blend_value * dpos.1 + self.position.1,
+        )
+    }
+
+    pub fn get_life_fraction(&self) -> f32 {
+        self.life as f32 / self.max_life as f32
     }
 
     pub fn get_time(&mut self) -> f32 {
@@ -101,15 +121,31 @@ impl Moon {
 
     pub fn hit(&mut self, damage: u32) {
         self.life = self.life.saturating_sub(damage);
+        println!("got hit {:?}", self.life);
         if self.life == 0 {
             self.state = MoonState::Dead
         };
     }
     pub fn heal(&mut self, healing: u32) {
-        self.life = self.life.saturating_add(healing).clamp(0_u32, self.max_life);
+        self.life = self
+            .life
+            .saturating_add(healing)
+            .clamp(0_u32, self.max_life);
+        println!("got healed {:?}", self.life);
     }
 }
 
+pub fn update_moon_data(
+    moon_data: &MoonData,
+    display: &DisplayType,
+) -> Result<MoonData, Box<dyn std::error::Error>> {
+    let (moon_vb, moon_idxb) = create_moon_vertex_buffer(&moon_data.moon, display)?;
+    Ok(MoonData {
+        moon_vb,
+        moon_idxb,
+        moon: moon_data.moon.clone(),
+    })
+}
 pub struct MoonData {
     pub moon_vb: VertexBuffer<MoonVertex>,
     pub moon_idxb: IndexBuffer<u32>,

@@ -1,30 +1,31 @@
 use crate::config::load_config;
 use crate::display::{display_window::DisplayType, timestep::TimeStep};
 
+use crate::PlatoConfig;
 use crate::game::load_shaders;
 use crate::game::skull_game::config::SkullSettings;
-use crate::game::skull_game::moon::{create_moon_vertex_buffer, Moon, MoonData};
+use crate::game::skull_game::moon::{Moon, MoonData, create_moon_vertex_buffer, update_moon_data};
 use crate::game::skull_game::particle::{
-    generate_random_particles_around_point, generate_random_repulsed_particles_around_point,
-    update_particle_state, Particle, ParticleData, Target,
+    Particle, ParticleData, Target, generate_random_particles_around_point,
+    generate_random_repulsed_particles_around_point, update_particle_state,
 };
 use crate::game::skull_game::position_visualization::spawn_based_on_mask;
-use crate::game::skull_game::skull::{update_skull_state, GameEvent, SkullData, SkullSpawner};
+use crate::game::skull_game::skull::{GameEvent, SkullData, SkullSpawner, update_skull_state};
 use crate::game::skull_game::util::load_texture;
 use crate::game::skull_game::victory::VicotryData;
 use crate::game::sound::{AudioHandler, SoundType};
 use crate::game::util::load_rgb_image_as_texture;
 use crate::types::game_types::GameTrait;
-use crate::PlatoConfig;
 
 use opencv::prelude::*;
 
-use ::glium::{uniform, Surface};
+use ::glium::{Surface, uniform};
 use glium::texture::{Texture2d, Texture2dArray};
 use glium::winit::keyboard::Key;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+
 #[derive(Debug, Clone, Copy)]
 enum GameState {
     PreGame,
@@ -91,12 +92,13 @@ impl SkullGame {
         pos: (f32, f32),
         scale: f32,
         target_pos: (f32, f32),
+        target_scale: f32,
         color: (f32, f32, f32),
     ) -> Vec<Particle> {
         let target = Target {
             center: target_pos,
             gravity: 3.5,
-            size: 0.2,
+            size: target_scale,
         };
         generate_random_particles_around_point(pos, scale, target, 1.0, color, 0.01, 2000)
     }
@@ -123,7 +125,8 @@ impl SkullGame {
                                 .append(&mut Self::spawn_particles_for_skull(
                                     pos,
                                     scale,
-                                    moon_ref.moon.position,
+                                    moon_ref.moon.get_position(),
+                                    moon_ref.moon.scale * 1.2,
                                     (0.0, 1.0, 1.0),
                                 ));
                             moon_ref.moon.hit(self.difficultiy.player_damage);
@@ -245,6 +248,8 @@ impl SkullGame {
             self.particle_data.as_ref().unwrap().particles.clone(),
             display,
         )?);
+
+        self.moon_data = Some(update_moon_data(self.moon_data.as_ref().unwrap(), display)?);
         Ok(())
     }
 }
@@ -387,9 +392,11 @@ impl GameTrait for SkullGame {
         if let GameState::PreGame = *state {
             match event.as_ref() {
                 Key::Character("1") => {
+                    println!("set difficultiy normal");
                     self.difficultiy = DiffcultySelector::default();
                 }
                 Key::Character("2") => {
+                    println!("set difficultiy easy");
                     self.difficultiy = DiffcultySelector {
                         player_damage: 5,
                         escape_penalty: 0,

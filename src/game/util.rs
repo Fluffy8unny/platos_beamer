@@ -1,7 +1,7 @@
-use crate::config::{load_config, ShaderConfig};
+use crate::config::{ShaderConfig, load_config};
 use crate::display::display_window::DisplayType;
 use image::ImageReader;
-use opencv::imgproc::{cvt_color, COLOR_BGR2GRAY};
+use opencv::imgproc::{COLOR_BGR2GRAY, cvt_color};
 use opencv::prelude::*;
 
 pub fn load_shaders(
