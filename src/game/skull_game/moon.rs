@@ -103,14 +103,13 @@ impl Moon {
 
     pub fn get_position(&self) -> (f32, f32) {
         let blend_value = 1.0 - self.get_life_fraction();
-        let lerp_factor = 0.0005;
         let dpos = (
-            self.max_position.0 - self.current_position.0,
-            self.max_position.1 - self.current_position.1,
+            self.max_position.0 - self.position.0,
+            self.max_position.1 - self.position.1,
         );
         (
-            (blend_value * dpos.0).min(lerp_factor) + self.current_position.0,
-            (blend_value * dpos.1).min(lerp_factor) + self.current_position.1,
+            blend_value * dpos.0 + self.position.0,
+            blend_value * dpos.1 + self.position.1,
         )
     }
 

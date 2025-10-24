@@ -163,10 +163,7 @@ pub fn get_bounding_box(skull: &Skull, dims: (i32, i32)) -> Result<(Range, Range
     };
     let radius = skull.scale / 2_f32;
     Ok((
-        Range::new(
-            convert(-skull.center.1 - radius, dims.0),
-            convert(-skull.center.1 + radius, dims.0),
-        )?,
+        Range::new(0_i32, dims.0)?,
         Range::new(
             convert(-skull.center.0 - radius, dims.1),
             convert(-skull.center.0 + radius, dims.1),

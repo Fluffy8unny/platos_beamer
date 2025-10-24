@@ -201,10 +201,6 @@ impl SkullGame {
             blend: glium::draw_parameters::Blend::alpha_blending(),
             ..Default::default()
         };
-        println!(
-            "life fraction {:?}",
-            self.moon_data.as_ref().unwrap().moon.get_life_fraction()
-        );
         match &mut self.moon_data {
             Some(moon) => Ok(frame.draw(
                 &moon.moon_vb,
@@ -355,7 +351,7 @@ impl GameTrait for SkullGame {
     ) -> Result<(), Box<dyn std::error::Error>> {
         //particles for pos visialization
         if let Some(mask) = &self.mask {
-            if let Ok(mut motion_particles) = spawn_based_on_mask(mask, 200) {
+            if let Ok(mut motion_particles) = spawn_based_on_mask(mask, 800) {
                 if let Some(particle_data) = &mut self.particle_data {
                     particle_data.particles.append(&mut motion_particles);
                 }
@@ -373,10 +369,6 @@ impl GameTrait for SkullGame {
                 self.hit_test(timestep)?;
 
                 self.moon_data.as_mut().unwrap().moon.life.update();
-                println!(
-                    "moon life {:?}",
-                    self.moon_data.as_ref().unwrap().moon.life.current_value
-                );
                 //update vertex/index buffer particle_data
                 self.update_dynamic_buffers(display)?;
 

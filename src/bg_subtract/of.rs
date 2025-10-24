@@ -1,28 +1,40 @@
 use crate::types::BackgroundSubtractor;
 use opencv::Result;
-use opencv::core::{Mat, MatExpr, Vector, cart_to_polar, greater_than_mat_f64, split};
+use opencv::core::{
+    Mat, MatExpr, MatExprTraitConst, Vector, cart_to_polar, greater_than_mat_f64, split,
+};
 use opencv::imgproc::{COLOR_BGR2GRAY, cvt_color};
 use opencv::video::calc_optical_flow_farneback;
 
 #[derive(Debug, Clone, Copy)]
 pub struct OfSettings {
+    mode: OfOutputType,
     scales: i32,
     win_size: i32,
     iterations: i32,
     poly_n: i32,
     poly_sigma: f64,
     flags: i32,
+    threshold: f64,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum OfOutputType {
+    Magnitude,
+    YDirection,
 }
 
 impl OfSettings {
     pub fn default() -> OfSettings {
         OfSettings {
+            mode: OfOutputType::YDirection,
             scales: 3_i32,
             win_size: 15_i32,
             iterations: 3_i32,
             poly_n: 5_i32,
             poly_sigma: 1.2_f64,
             flags: 0_i32,
+            threshold: 15.0_f64,
         }
     }
 }
@@ -52,6 +64,13 @@ fn calc_flow_magnitude(flow: Mat) -> Result<Mat> {
     cart_to_polar(&dx, &dy, &mut magnitude, &mut angle, false)?;
 
     Ok(magnitude)
+}
+
+fn calc_jumps(flow: Mat) -> Result<Mat> {
+    let mut channels: Vector<Mat> = Vector::default();
+    split(&flow, &mut channels)?;
+    let res_expr = -1_f64 * channels.get(1)?.clone();
+    Ok(res_expr.into_result()?.to_mat()?)
 }
 
 impl BackgroundSubtractor for OfSubtractor {
@@ -84,8 +103,11 @@ impl BackgroundSubtractor for OfSubtractor {
             self.settings.flags,
         )?;
         self.prev_img = Some(gray_input);
-        let magnitude = calc_flow_magnitude(flow)?;
-        greater_than_mat_f64(&magnitude, 5.0)
+        let magnitude = match self.settings.mode {
+            OfOutputType::Magnitude => calc_flow_magnitude(flow)?,
+            OfOutputType::YDirection => calc_jumps(flow)?,
+        };
+        greater_than_mat_f64(&magnitude, self.settings.threshold)
     }
 
     fn reset(&mut self, _background_img: Mat) {

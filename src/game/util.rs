@@ -115,10 +115,6 @@ impl<T> Interpolator<T> {
             + Default
             + PartialOrd,
     {
-        println!(
-            "updating interpolator from {:?} to {:?} {:?}",
-            self.current_value, self.target_value, self.interp_speed
-        );
         if self.current_value == self.target_value {
             return;
         }

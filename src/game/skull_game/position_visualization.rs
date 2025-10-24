@@ -32,12 +32,15 @@ pub fn spawn_based_on_mask(
                 size: 0.1,
             };
 
-            let v = randomizer.random_range(0.7_f32..1.3_f32);
+            let v = randomizer.random_range(3.7_f32..9.3_f32);
+            let r = randomizer.random_range(0.7_f32..1_f32);
+            let g = randomizer.random_range(0_f32..0.5_f32);
+            let o = randomizer.random_range(0.5_f32..1_f32);
             Ok(Particle::new(
-                gl_pos,
-                0.025,
-                (1.0, 0.5, 1.0),
-                1.0,
+                (gl_pos.0, -1.0),
+                0.0125,
+                (r, g, 0.0),
+                o,
                 (0.0, v),
                 target,
                 update_linear_particle,
