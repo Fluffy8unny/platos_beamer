@@ -108,7 +108,6 @@ impl<T> Interpolator<T> {
     where
         T: Copy
             + std::ops::Sub<Output = T>
-            + std::fmt::Debug
             + std::ops::Neg<Output = T>
             + std::ops::AddAssign
             + std::ops::Mul<Output = T>

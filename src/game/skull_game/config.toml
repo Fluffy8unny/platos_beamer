@@ -11,6 +11,7 @@ y_start = [-0.5,0.5]
 rot     = [-0.4,0.4]
 skull_shader = "src/shaders/skull_game_skull.toml"
 particle_shader="src/shaders/skull_game_particle.toml"
+live_shader="src/shaders/skull_game_live.toml"
 moon_shader="src/shaders/skull_game_moon.toml"
 victory_shader="src/shaders/skull_game_victory.toml"
 

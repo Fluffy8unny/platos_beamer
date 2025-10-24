@@ -1,4 +1,5 @@
 mod config;
+mod live_view;
 mod moon;
 mod particle;
 mod position_visualization;

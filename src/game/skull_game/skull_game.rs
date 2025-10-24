@@ -4,6 +4,7 @@ use crate::display::{display_window::DisplayType, timestep::TimeStep};
 use crate::PlatoConfig;
 use crate::game::load_shaders;
 use crate::game::skull_game::config::SkullSettings;
+use crate::game::skull_game::live_view::LiveViewData;
 use crate::game::skull_game::moon::{Moon, MoonData, create_moon_vertex_buffer, update_moon_data};
 use crate::game::skull_game::particle::{
     Particle, ParticleData, Target, generate_random_particles_around_point,
@@ -49,6 +50,7 @@ impl DiffcultySelector {
 pub struct SkullGame {
     skull_data: Option<SkullData>,
     particle_data: Option<ParticleData>,
+    live_view_data: Option<LiveViewData>,
     moon_data: Option<MoonData>,
     victory_data: Option<VicotryData>,
 
@@ -71,6 +73,7 @@ impl SkullGame {
         Ok(SkullGame {
             skull_data: None,
             particle_data: None,
+            live_view_data: None,
             moon_data: None,
             victory_data: None,
             programs: HashMap::new(),
@@ -166,6 +169,22 @@ impl SkullGame {
             blend: glium::draw_parameters::Blend::alpha_blending(),
             ..Default::default()
         };
+        match &mut self.live_view_data {
+            Some(live) => {
+                if let Some(mat) = live.live_view_texture.as_ref() {
+                    frame.draw(
+                        &live.live_view_vb,
+                        &live.live_view_ib,
+                        &self.programs["live_program"],
+                        &uniform! { live_view_tex: mat},
+                        &params,
+                    )?
+                };
+                Ok(())
+            }
+            None => Err(Self::get_boxed_opencv_error("Live View", 3)),
+        }?;
+
         match &mut self.moon_data {
             Some(moon) => Ok(frame.draw(
                 &moon.moon_vb,
@@ -201,6 +220,23 @@ impl SkullGame {
             blend: glium::draw_parameters::Blend::alpha_blending(),
             ..Default::default()
         };
+
+        match &mut self.live_view_data {
+            Some(live) => {
+                if let Some(mat) = live.live_view_texture.as_ref() {
+                    frame.draw(
+                        &live.live_view_vb,
+                        &live.live_view_ib,
+                        &self.programs["live_program"],
+                        &uniform! { live_view_tex: mat},
+                        &params,
+                    )?
+                };
+                Ok(())
+            }
+            None => Err(Self::get_boxed_opencv_error("Live View", 3)),
+        }?;
+
         match &mut self.moon_data {
             Some(moon) => Ok(frame.draw(
                 &moon.moon_vb,
@@ -279,6 +315,7 @@ impl GameTrait for SkullGame {
         load_shader_helper("skull_program", &self.settings.skull_shader)?;
         load_shader_helper("particle_program", &self.settings.particle_shader)?;
         load_shader_helper("moon_program", &self.settings.moon_shader)?;
+        load_shader_helper("live_program", &self.settings.live_shader)?;
         load_shader_helper("victory_program", &self.settings.victory_shader)?;
 
         //load textures
@@ -310,6 +347,10 @@ impl GameTrait for SkullGame {
             display,
         )?);
 
+        //get live view data
+        self.live_view_data = Some(LiveViewData::generate_vertex_index_buffer(display)?);
+
+        //create particle data
         self.particle_data = Some(update_particle_state(
             Vec::with_capacity(self.settings.max_number),
             display,
@@ -335,11 +376,14 @@ impl GameTrait for SkullGame {
 
     fn update(
         &mut self,
-        _image: &Mat,
+        image: &Mat,
         mask: &Mat,
-        _display: &DisplayType,
+        display: &DisplayType,
     ) -> Result<(), Box<dyn std::error::Error>> {
         self.mask = Some(mask.clone());
+        if let Some(lv_ref) = self.live_view_data.as_mut() {
+            lv_ref.set_live_view_texture(display, image)?
+        };
         Ok(())
     }
 

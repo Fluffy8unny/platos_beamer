@@ -16,6 +16,7 @@ pub struct SkullSettings {
     pub mask_color: (u8, u8, u8),
     pub skull_shader: String,
     pub particle_shader: String,
+    pub live_shader: String,
     pub moon_shader: String,
     pub victory_shader: String,
     pub moon_textures: Vec<String>,
