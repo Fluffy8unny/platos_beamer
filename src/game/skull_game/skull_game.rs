@@ -125,7 +125,7 @@ impl SkullGame {
                                 .append(&mut Self::spawn_particles_for_skull(
                                     pos,
                                     scale,
-                                    moon_ref.moon.get_position(),
+                                    moon_ref.moon.current_position,
                                     moon_ref.moon.scale * 1.2,
                                     (0.0, 1.0, 1.0),
                                 ));
@@ -139,8 +139,8 @@ impl SkullGame {
                                     scale,
                                     1.0_f32,
                                     (1.0, 0.0, 0.0),
-                                    0.02,
-                                    800,
+                                    0.04,
+                                    1200,
                                 ),
                             );
                             moon_ref.moon.heal(self.difficultiy.escape_penalty);
@@ -201,6 +201,10 @@ impl SkullGame {
             blend: glium::draw_parameters::Blend::alpha_blending(),
             ..Default::default()
         };
+        println!(
+            "life fraction {:?}",
+            self.moon_data.as_ref().unwrap().moon.get_life_fraction()
+        );
         match &mut self.moon_data {
             Some(moon) => Ok(frame.draw(
                 &moon.moon_vb,
@@ -248,7 +252,7 @@ impl SkullGame {
             self.particle_data.as_ref().unwrap().particles.clone(),
             display,
         )?);
-
+        self.moon_data.as_mut().unwrap().moon.update_position();
         self.moon_data = Some(update_moon_data(self.moon_data.as_ref().unwrap(), display)?);
         Ok(())
     }
@@ -260,7 +264,7 @@ impl GameTrait for SkullGame {
         display: &DisplayType,
         config: PlatoConfig,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let moon = Moon::new(5, (0_f32, 0.25_f32), (0_f32, 0.5_f32), 0.2);
+        let moon = Moon::new(20, (0_f32, 0.25_f32), (0_f32, 0.5_f32), 0.2);
         let (moon_vb, moon_idxb) = create_moon_vertex_buffer(&moon, display)?;
         self.moon_data = Some(MoonData {
             moon_vb,
@@ -368,6 +372,11 @@ impl GameTrait for SkullGame {
                 //hit test
                 self.hit_test(timestep)?;
 
+                self.moon_data.as_mut().unwrap().moon.life.update();
+                println!(
+                    "moon life {:?}",
+                    self.moon_data.as_ref().unwrap().moon.life.current_value
+                );
                 //update vertex/index buffer particle_data
                 self.update_dynamic_buffers(display)?;
 
@@ -375,7 +384,7 @@ impl GameTrait for SkullGame {
                 self.draw_entities(frame)?;
                 //check for win condition
                 if let Some(moon_d) = self.moon_data.as_ref() {
-                    if moon_d.moon.life == 0_u32 {
+                    if moon_d.moon.life.current_value == 0_f32 {
                         *state = GameState::PostGame;
                     }
                 }
@@ -391,28 +400,33 @@ impl GameTrait for SkullGame {
         let mut state = self.game_state.lock().unwrap();
         if let GameState::PreGame = *state {
             match event.as_ref() {
-                Key::Character("1") => {
-                    println!("set difficultiy normal");
-                    self.difficultiy = DiffcultySelector::default();
-                }
-                Key::Character("2") => {
-                    println!("set difficultiy easy");
-                    self.difficultiy = DiffcultySelector {
-                        player_damage: 5,
-                        escape_penalty: 0,
-                    };
-                }
                 Key::Character(val) if val.to_lowercase() == self.settings.start_key => {
                     *state = GameState::Game;
                 }
                 _ => {}
             };
         }
+
+        match event.as_ref() {
+            Key::Character("1") => {
+                println!("set difficultiy normal");
+                self.difficultiy = DiffcultySelector::default();
+            }
+            Key::Character("2") => {
+                println!("set difficultiy easy");
+                self.difficultiy = DiffcultySelector {
+                    player_damage: 5,
+                    escape_penalty: 0,
+                };
+            }
+            _ => {}
+        };
     }
 
     fn reset(&mut self) {
         if let Some(moon_d) = self.moon_data.as_mut() {
-            moon_d.moon.life = moon_d.moon.max_life;
+            moon_d.moon.life.reset(moon_d.moon.max_life as f32);
+            moon_d.moon.current_position = moon_d.moon.position;
         }
 
         if let Some(part_d) = self.particle_data.as_mut() {

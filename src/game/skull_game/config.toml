@@ -1,4 +1,4 @@
-spawn_rate = 0.5
+spawn_rate = 1.0
 max_number = 50
 scale_speed   = 0.1
 move_speed    = 0.15

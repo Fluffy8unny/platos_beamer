@@ -69,3 +69,69 @@ pub fn mat_1c_to_texture_r(
 
     Ok(glium::Texture2d::new(display, text2d)?)
 }
+
+#[derive(Copy, Clone)]
+pub struct Interpolator<T> {
+    pub target_value: T,
+    pub current_value: T,
+    interp_speed: T,
+}
+
+impl<T> Interpolator<T> {
+    pub fn new(starting_value: T, interp_speed: T) -> Self
+    where
+        T: Copy,
+    {
+        Self {
+            target_value: starting_value,
+            current_value: starting_value,
+            interp_speed,
+        }
+    }
+
+    pub fn reset(&mut self, value: T)
+    where
+        T: Copy,
+    {
+        self.target_value = value;
+        self.current_value = value;
+    }
+
+    pub fn change_target(&mut self, new_target: T)
+    where
+        T: Copy,
+    {
+        self.target_value = new_target;
+    }
+
+    pub fn update(&mut self)
+    where
+        T: Copy
+            + std::ops::Sub<Output = T>
+            + std::fmt::Debug
+            + std::ops::Neg<Output = T>
+            + std::ops::AddAssign
+            + std::ops::Mul<Output = T>
+            + Default
+            + PartialOrd,
+    {
+        println!(
+            "updating interpolator from {:?} to {:?} {:?}",
+            self.current_value, self.target_value, self.interp_speed
+        );
+        if self.current_value == self.target_value {
+            return;
+        }
+        let diff = self.target_value - self.current_value;
+        let step = if diff > T::default() {
+            self.interp_speed
+        } else {
+            -self.interp_speed
+        };
+        if step * step > diff * diff {
+            self.current_value = self.target_value;
+            return;
+        }
+        self.current_value += step;
+    }
+}

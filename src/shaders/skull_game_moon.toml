@@ -35,13 +35,9 @@ fragment="""
       out vec4 frag_color;
       
       void main(){ 
-    
-           float blend_x = (1.0 - abs(v_uv_coords.x));
-           float blend_y = (1.0 - abs(v_uv_coords.y));
-
            float luminosity = texture(moon_textures, vec3(v_uv_coords, 0.0)).r;
-           float noise = texture(moon_textures, vec3(v_uv_coords, 2.0)).r;
-           float mask = texture(moon_textures, vec3(v_uv_coords, 1.0)).r;
+           float noise = texture(moon_textures, vec3(v_uv_coords, 1.0)).r;
+           float mask = texture(moon_textures, vec3(v_uv_coords, 2.0)).r;
 
            float stepMin = time;
            float stepMax = stepMin + 0.05;
