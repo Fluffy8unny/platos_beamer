@@ -178,10 +178,14 @@ pub fn generate_random_particles_around_point(
     number: usize,
 ) -> Vec<Particle> {
     let mut result: Vec<Particle> = Vec::with_capacity(number);
+    let mut randomizer = rng();
+
     for _ in 0..number {
         let q = get_random_point_in_area(point, area);
-        let v_0 = (q.0 - point.0, q.1 - point.1);
-        let v_norm = max_initial_speed / (v_0.0 * v_0.0 + v_0.1 * v_0.1).sqrt();
+        let v_0: (f32, f32) = (q.0 - point.0, q.1 - point.1);
+        let vary = randomizer.random_range(0.5_f32..1.3_f32);
+        let v_norm = vary * max_initial_speed / (v_0.0 * v_0.0 + v_0.1 * v_0.1).sqrt();
+
         let particle = Particle::new(
             q,
             scale,
@@ -205,6 +209,8 @@ pub fn generate_random_repulsed_particles_around_point(
     number: usize,
 ) -> Vec<Particle> {
     let mut result: Vec<Particle> = Vec::with_capacity(number);
+    let mut randomizer = rng();
+
     for _ in 0..number {
         let q = get_random_point_in_area(point, area);
         let target = Target {
@@ -213,7 +219,8 @@ pub fn generate_random_repulsed_particles_around_point(
             size: 1_f32,
         };
         let v_0 = (q.0 - point.0, q.1 - point.1);
-        let v_norm = max_initial_speed / (v_0.0 * v_0.0 + v_0.1 * v_0.1).sqrt();
+        let vary = randomizer.random_range(0.5_f32..1.0_f32);
+        let v_norm = vary * max_initial_speed / (v_0.0 * v_0.0 + v_0.1 * v_0.1).sqrt();
         let particle = Particle::new(
             q,
             scale,

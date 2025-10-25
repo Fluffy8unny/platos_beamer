@@ -39,12 +39,16 @@ impl Minimap {
         })
     }
     pub fn draw(&self, frame: &mut glium::Frame) -> Result<(), Box<dyn Error>> {
+        let params = glium::DrawParameters {
+            blend: glium::draw_parameters::Blend::alpha_blending(),
+            ..Default::default()
+        };
         frame.draw(
             &self.buffers.vertex_buffer,
             &self.buffers.index_buffer,
             &self.program,
             &uniform! { tex: &self.texture },
-            &glium::DrawParameters::default(),
+            &params,
         )?;
         Ok(())
     }

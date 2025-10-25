@@ -83,6 +83,10 @@ textures = [
         "victory_texture",
         "assets/victory.png",
     ],
+    [
+        "clouds",
+        "assets/clouds/noise_0.png",
+    ]
 ]
 mask_color = [130, 70, 200]
 
@@ -102,7 +106,7 @@ normal_mode_key = "2"
     scale=0.01
     color=[0.0, 1.0, 1.0]
     opacity=1.0
-    initial_velocity = 1.0
+    initial_velocity = 1.7
     number= 2000
 
 [particle_settings.visualization]

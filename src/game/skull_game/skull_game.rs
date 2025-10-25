@@ -177,15 +177,16 @@ impl SkullGame {
         &mut self,
         frame: &mut glium::Frame,
         params: &glium::DrawParameters,
+        timestep: &TimeStep,
     ) -> Result<(), Box<dyn std::error::Error>> {
         match &mut self.live_view_data {
             Some(live) => {
-                if let Some(mat) = live.live_view_texture.as_ref() {
+                if let Some(mat) = live.live_view_texture.lock().unwrap().as_ref() {
                     frame.draw(
                         &live.live_view_vb,
                         &live.live_view_ib,
                         &self.programs["live_program"],
-                        &uniform! { live_view_tex: mat},
+                    &uniform! { live_tex: mat, clouds: &self.textures["clouds"], time: timestep.runtime*0.001 },
                         &params,
                     )?
                 };
@@ -212,12 +213,16 @@ impl SkullGame {
         }
     }
 
-    fn draw_start(&mut self, frame: &mut glium::Frame) -> Result<(), Box<dyn std::error::Error>> {
+    fn draw_start(
+        &mut self,
+        frame: &mut glium::Frame,
+        timestep: &TimeStep,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let params = glium::DrawParameters {
             blend: glium::draw_parameters::Blend::alpha_blending(),
             ..Default::default()
         };
-        self.draw_live(frame, &params)?;
+        self.draw_live(frame, &params, timestep)?;
         self.draw_moon(frame, &params)
     }
 
@@ -237,12 +242,13 @@ impl SkullGame {
     fn draw_entities(
         &mut self,
         frame: &mut glium::Frame,
+        timestep: &TimeStep,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let params = glium::DrawParameters {
             blend: glium::draw_parameters::Blend::alpha_blending(),
             ..Default::default()
         };
-        self.draw_live(frame, &params)?;
+        self.draw_live(frame, &params, timestep)?;
         self.draw_moon(frame, &params)?;
 
         match &self.skull_data {
@@ -389,7 +395,7 @@ impl GameTrait for SkullGame {
         let mut state = state_mut.lock().unwrap();
         match *state {
             GameState::PreGame => {
-                self.draw_start(frame)?;
+                self.draw_start(frame, timestep)?;
             }
 
             GameState::Game => {
@@ -401,7 +407,7 @@ impl GameTrait for SkullGame {
                 self.update_dynamic_buffers(display)?;
 
                 //draw everything
-                self.draw_entities(frame)?;
+                self.draw_entities(frame, timestep)?;
                 //check for win condition
                 if let Some(moon_d) = self.moon_data.as_ref() {
                     if moon_d.moon.life.current_value == 0_f32 {

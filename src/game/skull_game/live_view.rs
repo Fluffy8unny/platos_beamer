@@ -3,11 +3,12 @@ use crate::display::primitves::{QUAD_INDICES, Vertex, get_quad_buffer};
 use crate::game::util::image_to_gray_texture_r;
 use glium::{IndexBuffer, VertexBuffer};
 use opencv::prelude::*;
+use std::sync::{Arc, Mutex};
 
 pub struct LiveViewData {
     pub live_view_vb: VertexBuffer<Vertex>,
     pub live_view_ib: IndexBuffer<u16>,
-    pub live_view_texture: Option<glium::Texture2d>,
+    pub live_view_texture: Arc<Mutex<Option<glium::Texture2d>>>,
 }
 
 impl LiveViewData {
@@ -24,7 +25,7 @@ impl LiveViewData {
         Ok(LiveViewData {
             live_view_vb,
             live_view_ib,
-            live_view_texture: None,
+            live_view_texture: Arc::new(Mutex::new(None)),
         })
     }
 
@@ -33,7 +34,7 @@ impl LiveViewData {
         display: &DisplayType,
         live_img: &Mat,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        self.live_view_texture = Some(image_to_gray_texture_r(display, live_img)?);
+        *self.live_view_texture.lock().unwrap() = Some(image_to_gray_texture_r(display, live_img)?);
         Ok(())
     }
 }
