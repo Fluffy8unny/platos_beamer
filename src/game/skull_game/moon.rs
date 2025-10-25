@@ -23,7 +23,6 @@ pub struct Moon {
     pub life: Interpolator<f32>,
     pub max_life: u32,
     pub state: MoonState,
-    timer: TimeStep,
 }
 
 #[derive(Copy, Clone)]
@@ -83,21 +82,15 @@ pub fn create_moon_vertex_buffer(
 }
 
 impl Moon {
-    pub fn new(
-        starting_life: u32,
-        position: (f32, f32),
-        max_position: (f32, f32),
-        scale: f32,
-    ) -> Self {
+    pub fn new(settings: crate::game::skull_game::config::MoonSettings) -> Self {
         Moon {
-            life: Interpolator::new(starting_life as f32, 0.01),
-            max_life: starting_life,
+            life: Interpolator::new(settings.starting_life as f32, 0.01),
+            max_life: settings.starting_life,
             state: MoonState::Alive,
-            position,
-            max_position,
-            current_position: position,
-            scale,
-            timer: TimeStep::new(),
+            position: settings.position,
+            max_position: settings.max_position,
+            current_position: settings.position,
+            scale: settings.scale,
         }
     }
 
@@ -117,10 +110,6 @@ impl Moon {
         self.life.current_value / self.max_life as f32
     }
 
-    pub fn get_time(&mut self) -> f32 {
-        self.timer.update();
-        self.timer.runtime
-    }
     pub fn update_position(&mut self) {
         self.current_position = self.get_position();
     }

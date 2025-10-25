@@ -107,6 +107,7 @@ fn update_particle_based_on_acceleration(
     particle.center.0 += particle.velocity.0 * dt;
     particle.center.1 += particle.velocity.1 * dt;
 }
+
 pub fn update_gravity_particle(particle: &mut Particle) {
     let dt = get_dt(particle);
     let dx = get_distance_to_target(particle);

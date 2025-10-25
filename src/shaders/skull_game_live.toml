@@ -24,6 +24,6 @@ fragment="""
       void main(){ 
          float val = texture(tex, vec2(uv_coords.x, uv_coords.y)).x;   
          float alpha = 1.0-0.5*( uv_coords.y + 1.0);
-           color =  vec4(val,val,val,alpha*alpha);
+           color =  vec4(val,val*0.6,0.6*val,alpha*alpha*0.8);
       }
       """

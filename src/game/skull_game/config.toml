@@ -1,40 +1,113 @@
+shader_settings = [
+    [
+        "skull_program",
+        "src/shaders/skull_game_skull.toml",
+    ],
+    [
+        "particle_program",
+        "src/shaders/skull_game_particle.toml",
+    ],
+    [
+        "live_program",
+        "src/shaders/skull_game_live.toml",
+    ],
+    [
+        "moon_program",
+        "src/shaders/skull_game_moon.toml",
+    ],
+    [
+        "victory_program",
+        "src/shaders/skull_game_victory.toml",
+    ],
+]
+
+sound_settings = [
+    [
+        "skull_kill_sound",
+        "assets/killed.mp3",
+    ],
+    [
+        "skull_escaped_sound",
+        "assets/escape.mp3",
+    ],
+]
+
+[skull_settings]
 spawn_rate = 1.0
 max_number = 50
-scale_speed   = 0.1
-move_speed    = 0.15
+scale_speed = 0.1
+move_speed = 0.15
 start_scale = 0.1
 hitable_from = 0.2
 max_scale = 0.3
 threshold = 0.1
-x_start = [-0.5,0.5]
-y_start = [-0.5,0.5]
-rot     = [-0.4,0.4]
-skull_shader = "src/shaders/skull_game_skull.toml"
-particle_shader="src/shaders/skull_game_particle.toml"
-live_shader="src/shaders/skull_game_live.toml"
-moon_shader="src/shaders/skull_game_moon.toml"
-victory_shader="src/shaders/skull_game_victory.toml"
+x_start = [-0.5, 0.5]
+y_start = [-0.5, 0.5]
+rot = [-0.4, 0.4]
 
-mask_color = [130,70,200]
-skull_alive_textures = [
-    "assets/skull/skull_0.png",
-    "assets/skull/skull_1.png",
-    "assets/skull/skull_2.png",
-    "assets/skull/skull_3.png",
+[moon_settings]
+    starting_life=20
+    position=[0.0,0.2]
+    max_position= [0.0, 0.5]
+    scale=0.25
+
+
+[texture_settings]
+texture_arrays = [
+    [
+        "skull_alive_textures",
+        [
+            "assets/skull/skull_0.png",
+            "assets/skull/skull_1.png",
+            "assets/skull/skull_2.png",
+            "assets/skull/skull_3.png",
+        ],
+    ],
+    [
+        "skull_killed_textures",
+        [
+            "assets/skull/skull_kill_0.png",
+            "assets/skull/skull_kill_1.png",
+        ],
+    ],
+    [
+        "moon_textures",
+        [
+            "assets/moon/moon_texture.png",
+            "assets/moon/moon_mask.png",
+        ],
+    ],
 ]
-
-skull_killed_textures= [
-    "assets/skull/skull_kill_0.png",
-    "assets/skull/skull_kill_1.png",
+textures = [
+    [
+        "victory_texture",
+        "assets/victory.png",
+    ],
 ]
+mask_color = [130, 70, 200]
 
-moon_textures= [
-    "assets/moon/moon_texture.png",
-    "assets/moon/moon_mask.png",
-]
-
-victory_texture = "assets/victory.png"
-
-skull_killed_sound= "assets/killed.mp3"
-skull_escaped_sound = "assets/escape.mp3"
+[key_settings]
 start_key = "s"
+easy_mode_key = "1"
+normal_mode_key = "2"
+
+[particle_settings.escaped] 
+    scale=0.04
+    color=[1.0, 0.0, 0.0]
+    opacity=1.0
+    initial_velocity = 1.0
+    number= 1200
+
+[particle_settings.killed]
+    scale=0.01
+    color=[0.0, 1.0, 1.0]
+    opacity=1.0
+    initial_velocity = 1.0
+    number= 2000
+
+[particle_settings.visualization]
+    scale=0.01
+    color=[0.0, 1.0, 1.0]
+    opacity=1.0
+    initial_velocity = 1.0
+    number= 2000

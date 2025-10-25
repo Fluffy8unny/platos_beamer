@@ -3,7 +3,7 @@ use crate::display::{display_window::DisplayType, timestep::TimeStep};
 
 use crate::PlatoConfig;
 use crate::game::load_shaders;
-use crate::game::skull_game::config::SkullSettings;
+use crate::game::skull_game::config::{GameSettings, ParticleSetting};
 use crate::game::skull_game::live_view::LiveViewData;
 use crate::game::skull_game::moon::{Moon, MoonData, create_moon_vertex_buffer, update_moon_data};
 use crate::game::skull_game::particle::{
@@ -47,6 +47,7 @@ impl DiffcultySelector {
         }
     }
 }
+
 pub struct SkullGame {
     skull_data: Option<SkullData>,
     particle_data: Option<ParticleData>,
@@ -54,22 +55,22 @@ pub struct SkullGame {
     moon_data: Option<MoonData>,
     victory_data: Option<VicotryData>,
 
-    programs: HashMap<&'static str, glium::Program>,
-    texture_arrays: HashMap<&'static str, Texture2dArray>,
-    textures: HashMap<&'static str, Texture2d>,
+    programs: HashMap<String, glium::Program>,
+    texture_arrays: HashMap<String, Texture2dArray>,
+    textures: HashMap<String, Texture2d>,
 
     skull_spawner: SkullSpawner,
     mask: Option<Mat>,
     sound: Option<AudioHandler>,
 
-    settings: SkullSettings,
+    settings: GameSettings,
     difficultiy: DiffcultySelector,
     game_state: Arc<Mutex<GameState>>,
 }
 
 impl SkullGame {
     pub fn new(config_path: &str) -> Result<SkullGame, Box<dyn std::error::Error>> {
-        let settings: SkullSettings = load_config(config_path)?;
+        let settings: GameSettings = load_config(config_path)?;
         Ok(SkullGame {
             skull_data: None,
             particle_data: None,
@@ -81,7 +82,7 @@ impl SkullGame {
             textures: HashMap::new(),
             skull_spawner: SkullSpawner {
                 time_since: 0_f32,
-                settings: settings.clone(),
+                settings: settings.skull_settings.clone(),
             },
             mask: None,
             settings,
@@ -93,17 +94,25 @@ impl SkullGame {
 
     fn spawn_particles_for_skull(
         pos: (f32, f32),
-        scale: f32,
+        skull_scale: f32,
         target_pos: (f32, f32),
         target_scale: f32,
-        color: (f32, f32, f32),
+        settings: &ParticleSetting,
     ) -> Vec<Particle> {
         let target = Target {
             center: target_pos,
             gravity: 3.5,
             size: target_scale,
         };
-        generate_random_particles_around_point(pos, scale, target, 1.0, color, 0.01, 2000)
+        generate_random_particles_around_point(
+            pos,
+            skull_scale,
+            target,
+            settings.initial_velocity,
+            settings.color,
+            settings.scale,
+            settings.number,
+        )
     }
 
     fn get_boxed_opencv_error(name: &str, code: i32) -> Box<opencv::Error> {
@@ -122,32 +131,32 @@ impl SkullGame {
             (Some(data), Some(particles)) => {
                 for skull in data.skulls.iter_mut() {
                     match skull.update(&self.mask, timestep)? {
-                        Some(GameEvent::Killed { pos, scale }) => {
+                        Some(GameEvent::Killed { pos, skull_scale }) => {
                             particles
                                 .particles
                                 .append(&mut Self::spawn_particles_for_skull(
                                     pos,
-                                    scale,
+                                    skull_scale,
                                     moon_ref.moon.current_position,
                                     moon_ref.moon.scale * 1.2,
-                                    (0.0, 1.0, 1.0),
+                                    &self.settings.particle_settings.killed,
                                 ));
                             moon_ref.moon.hit(self.difficultiy.player_damage);
-                            sound_ref.play("killed", SoundType::Sfx)?;
+                            sound_ref.play("skull_kill_sound", SoundType::Sfx)?;
                         }
                         Some(GameEvent::Escaped { pos, scale }) => {
                             particles.particles.append(
                                 &mut generate_random_repulsed_particles_around_point(
                                     pos,
                                     scale,
-                                    1.0_f32,
-                                    (1.0, 0.0, 0.0),
-                                    0.04,
-                                    1200,
+                                    self.settings.particle_settings.escaped.initial_velocity,
+                                    self.settings.particle_settings.escaped.color,
+                                    self.settings.particle_settings.escaped.scale,
+                                    self.settings.particle_settings.escaped.number,
                                 ),
                             );
                             moon_ref.moon.heal(self.difficultiy.escape_penalty);
-                            sound_ref.play("escaped", SoundType::Sfx)?;
+                            sound_ref.play("skull_escaped_sound", SoundType::Sfx)?;
                         }
                         None => {}
                     }
@@ -164,11 +173,11 @@ impl SkullGame {
         Ok(())
     }
 
-    fn draw_start(&mut self, frame: &mut glium::Frame) -> Result<(), Box<dyn std::error::Error>> {
-        let params = glium::DrawParameters {
-            blend: glium::draw_parameters::Blend::alpha_blending(),
-            ..Default::default()
-        };
+    fn draw_live(
+        &mut self,
+        frame: &mut glium::Frame,
+        params: &glium::DrawParameters,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         match &mut self.live_view_data {
             Some(live) => {
                 if let Some(mat) = live.live_view_texture.as_ref() {
@@ -183,8 +192,14 @@ impl SkullGame {
                 Ok(())
             }
             None => Err(Self::get_boxed_opencv_error("Live View", 3)),
-        }?;
+        }
+    }
 
+    fn draw_moon(
+        &mut self,
+        frame: &mut glium::Frame,
+        params: &glium::DrawParameters,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         match &mut self.moon_data {
             Some(moon) => Ok(frame.draw(
                 &moon.moon_vb,
@@ -194,9 +209,16 @@ impl SkullGame {
                 &params,
             )?),
             None => Err(Self::get_boxed_opencv_error("Moon", 3)),
-        }?;
+        }
+    }
 
-        Ok(())
+    fn draw_start(&mut self, frame: &mut glium::Frame) -> Result<(), Box<dyn std::error::Error>> {
+        let params = glium::DrawParameters {
+            blend: glium::draw_parameters::Blend::alpha_blending(),
+            ..Default::default()
+        };
+        self.draw_live(frame, &params)?;
+        self.draw_moon(frame, &params)
     }
 
     fn draw_victory(&mut self, frame: &mut glium::Frame) -> Result<(), Box<dyn std::error::Error>> {
@@ -205,7 +227,7 @@ impl SkullGame {
                 &v_data.vertex_buffer,
                 &v_data.index_buffer,
                 &self.programs["victory_program"],
-                &uniform! {tex:&self.textures["victory"]},
+                &uniform! {tex:&self.textures["victory_texture"]},
                 &glium::draw_parameters::DrawParameters::default(),
             )?),
             None => Err(Self::get_boxed_opencv_error("Victory", 3)),
@@ -220,40 +242,15 @@ impl SkullGame {
             blend: glium::draw_parameters::Blend::alpha_blending(),
             ..Default::default()
         };
-
-        match &mut self.live_view_data {
-            Some(live) => {
-                if let Some(mat) = live.live_view_texture.as_ref() {
-                    frame.draw(
-                        &live.live_view_vb,
-                        &live.live_view_ib,
-                        &self.programs["live_program"],
-                        &uniform! { live_view_tex: mat},
-                        &params,
-                    )?
-                };
-                Ok(())
-            }
-            None => Err(Self::get_boxed_opencv_error("Live View", 3)),
-        }?;
-
-        match &mut self.moon_data {
-            Some(moon) => Ok(frame.draw(
-                &moon.moon_vb,
-                &moon.moon_idxb,
-                &self.programs["moon_program"],
-                &uniform! {moon_textures: &self.texture_arrays["moon_textures"],time: moon.moon.get_life_fraction()},
-                &params,
-            )?),
-            None => Err(Self::get_boxed_opencv_error("Moon", 3)),
-        }?;
+        self.draw_live(frame, &params)?;
+        self.draw_moon(frame, &params)?;
 
         match &self.skull_data {
             Some(skulls) => Ok(frame.draw(
                 &skulls.skull_vb,
                 &skulls.skull_idxb,
                 &self.programs["skull_program"],
-                &uniform! { tex: &self.texture_arrays["skull_textures"], tex_killed: &self.texture_arrays["skull_killed_textures"]},
+                &uniform! { tex: &self.texture_arrays["skull_alive_textures"], tex_killed: &self.texture_arrays["skull_killed_textures"]},
                 &params
             )?),
             None => Err(Self::get_boxed_opencv_error("Skull",3)),
@@ -296,7 +293,7 @@ impl GameTrait for SkullGame {
         display: &DisplayType,
         config: PlatoConfig,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let moon = Moon::new(20, (0_f32, 0.25_f32), (0_f32, 0.5_f32), 0.2);
+        let moon = Moon::new(self.settings.moon_settings.clone());
         let (moon_vb, moon_idxb) = create_moon_vertex_buffer(&moon, display)?;
         self.moon_data = Some(MoonData {
             moon_vb,
@@ -306,44 +303,39 @@ impl GameTrait for SkullGame {
 
         //load shaders
         let mut load_shader_helper =
-            |name: &'static str, path: &str| -> Result<(), Box<dyn std::error::Error>> {
-                let program = load_shaders(path, display)?;
+            |name: String, path: String| -> Result<(), Box<dyn std::error::Error>> {
+                let program = load_shaders(&path, display)?;
                 self.programs.insert(name, program);
                 Ok(())
             };
-
-        load_shader_helper("skull_program", &self.settings.skull_shader)?;
-        load_shader_helper("particle_program", &self.settings.particle_shader)?;
-        load_shader_helper("moon_program", &self.settings.moon_shader)?;
-        load_shader_helper("live_program", &self.settings.live_shader)?;
-        load_shader_helper("victory_program", &self.settings.victory_shader)?;
+        for (k, v) in self.settings.shader_settings.clone() {
+            load_shader_helper(k, v)?;
+        }
 
         //load textures
         let mut load_texture_helper =
-            |name: &'static str, path| -> Result<(), Box<dyn std::error::Error>> {
-                let tex = load_texture(path, self.settings.mask_color, display)?;
+            |name: String, path: Vec<String>| -> Result<(), Box<dyn std::error::Error>> {
+                let tex = load_texture(&path, self.settings.texture_settings.mask_color, display)?;
                 self.texture_arrays.insert(name, tex);
                 Ok(())
             };
+        for (k, v) in self.settings.texture_settings.texture_arrays.clone() {
+            load_texture_helper(k, v)?;
+        }
 
-        load_texture_helper("moon_textures", &self.settings.moon_textures)?;
-        load_texture_helper("skull_textures", &self.settings.skull_alive_textures)?;
-        load_texture_helper(
-            "skull_killed_textures",
-            &self.settings.skull_killed_textures,
-        )?;
-
-        let mut load_single_texture = |name, path| -> Result<(), Box<dyn std::error::Error>> {
-            let tex = load_rgb_image_as_texture(path, display)?;
-            self.textures.insert(name, tex);
-            Ok(())
-        };
-
-        load_single_texture("victory", &self.settings.victory_texture)?;
+        let mut load_single_texture =
+            |name, path: String| -> Result<(), Box<dyn std::error::Error>> {
+                let tex = load_rgb_image_as_texture(&path, display)?;
+                self.textures.insert(name, tex);
+                Ok(())
+            };
+        for (k, v) in self.settings.texture_settings.textures.clone() {
+            load_single_texture(k, v)?;
+        }
 
         //create statefull entitites
         self.skull_data = Some(update_skull_state(
-            Vec::with_capacity(self.settings.max_number),
+            Vec::with_capacity(self.settings.skull_settings.max_number),
             display,
         )?);
 
@@ -352,23 +344,14 @@ impl GameTrait for SkullGame {
 
         //create particle data
         self.particle_data = Some(update_particle_state(
-            Vec::with_capacity(self.settings.max_number),
+            Vec::with_capacity(self.settings.skull_settings.max_number),
             display,
         )?);
         self.victory_data = Some(VicotryData::new(display)?);
 
         //create sound
         self.sound = Some(AudioHandler::new(
-            vec![
-                (
-                    "killed".to_string(),
-                    self.settings.skull_killed_sound.clone(),
-                ),
-                (
-                    "escaped".to_string(),
-                    self.settings.skull_escaped_sound.clone(),
-                ),
-            ],
+            self.settings.sound_settings.clone(),
             config.sound_config,
         )?);
         Ok(())
@@ -408,6 +391,7 @@ impl GameTrait for SkullGame {
             GameState::PreGame => {
                 self.draw_start(frame)?;
             }
+
             GameState::Game => {
                 //hit test
                 self.hit_test(timestep)?;
@@ -425,6 +409,7 @@ impl GameTrait for SkullGame {
                     }
                 }
             }
+
             GameState::PostGame => {
                 self.draw_victory(frame)?;
             }
@@ -436,7 +421,9 @@ impl GameTrait for SkullGame {
         let mut state = self.game_state.lock().unwrap();
         if let GameState::PreGame = *state {
             match event.as_ref() {
-                Key::Character(val) if val.to_lowercase() == self.settings.start_key => {
+                Key::Character(val)
+                    if val.to_lowercase() == self.settings.key_settings.start_key =>
+                {
                     *state = GameState::Game;
                 }
                 _ => {}
@@ -444,11 +431,11 @@ impl GameTrait for SkullGame {
         }
 
         match event.as_ref() {
-            Key::Character("1") => {
+            Key::Character(val) if val == self.settings.key_settings.normal_mode_key => {
                 println!("set difficultiy normal");
                 self.difficultiy = DiffcultySelector::default();
             }
-            Key::Character("2") => {
+            Key::Character(val) if val == self.settings.key_settings.easy_mode_key => {
                 println!("set difficultiy easy");
                 self.difficultiy = DiffcultySelector {
                     player_damage: 5,

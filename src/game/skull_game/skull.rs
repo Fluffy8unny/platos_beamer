@@ -203,7 +203,7 @@ impl Skull {
                         self.timer.reset();
                         return Ok(Some(GameEvent::Killed {
                             pos: self.center,
-                            scale: self.scale,
+                            skull_scale: self.scale,
                         }));
                     }
                 }
@@ -272,7 +272,7 @@ pub fn update_skull_state(
 }
 
 pub enum GameEvent {
-    Killed { pos: (f32, f32), scale: f32 },
+    Killed { pos: (f32, f32), skull_scale: f32 },
     Escaped { pos: (f32, f32), scale: f32 },
 }
 
