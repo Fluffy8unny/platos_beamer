@@ -35,10 +35,10 @@ sound_settings = [
 [skull_settings]
 spawn_rate = 1.0
 max_number = 50
-scale_speed = 0.1
-move_speed = 0.15
+scale_speed = 0.06
+move_speed = 0.1
 start_scale = 0.1
-hitable_from = 0.2
+hitable_from = 0.1
 max_scale = 0.3
 threshold = 0.1
 x_start = [-0.5, 0.5]
@@ -79,7 +79,11 @@ textures = [
     ],
     [
         "clouds",
-        "assets/clouds/noise_0.png",
+        "assets/clouds/noise_1.png",
+    ],
+    [
+        "clouds2",
+        "assets/clouds/noise_2.png",
     ],
     [
         "moon",

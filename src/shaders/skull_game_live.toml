@@ -19,6 +19,7 @@ fragment="""
       in vec2 uv_coords;
       uniform sampler2D live_tex;
       uniform sampler2D clouds;
+      uniform sampler2D clouds2;
       uniform float time;
 
       out vec4 color;
@@ -29,11 +30,12 @@ fragment="""
          float offset_x = uv_coords.x + time/10.0;
          float offset_y = uv_coords.y +  time/15.0;
 
-         float cloud_offsetet = texture(clouds, vec2(offset_x, offset_y)).y;
+         float cloud_offsetet = texture(clouds2, vec2(offset_x, offset_y)).x;
+         float cloud_offsetett = texture(clouds2, vec2(offset_x, offset_y)).y;
          float cloud_val = texture(clouds, uv_coords).y;
 
          float alpha = 1.0-0.5*( uv_coords.y + 1.0);
-         val = val*cloud_val+ 0.5*cloud_val*cloud_offsetet;
-         color =  vec4(val,val*0.6,0.6*val,alpha);
+         val = val*cloud_val+0.5*cloud_val*cloud_offsetet*cloud_offsetett;
+         color =  vec4(val,val*0.3,0.3*val,alpha);
       }
       """
