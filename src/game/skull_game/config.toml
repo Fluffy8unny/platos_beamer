@@ -70,14 +70,8 @@ texture_arrays = [
             "assets/skull/skull_kill_1.png",
         ],
     ],
-    [
-        "moon_textures",
-        [
-            "assets/moon/moon_texture.png",
-            "assets/moon/moon_mask.png",
-        ],
-    ],
 ]
+
 textures = [
     [
         "victory_texture",
@@ -86,6 +80,14 @@ textures = [
     [
         "clouds",
         "assets/clouds/noise_0.png",
+    ],
+    [
+        "moon",
+        "assets/moon/moon_mask.png",
+    ],
+    [
+        "moon_texture",
+        "assets/moon/moon_texture.png",
     ]
 ]
 mask_color = [130, 70, 200]

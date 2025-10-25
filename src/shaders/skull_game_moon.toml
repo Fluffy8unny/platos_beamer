@@ -29,15 +29,16 @@ fragment="""
       in float v_texture_id;
 
       uniform float time;
-      uniform sampler2DArray moon_textures;
+      uniform sampler2D moon_texture;
+      uniform sampler2D moon_mask;
       
       out float v_blend_value;
       out vec4 frag_color;
-      
+  
       void main(){ 
-           float luminosity = texture(moon_textures, vec3(v_uv_coords, 0.0)).r;
-           float noise = texture(moon_textures, vec3(v_uv_coords, 1.0)).r;
-           float mask = texture(moon_textures, vec3(v_uv_coords, 2.0)).r;
+           float luminosity = texture(moon_texture, 1.0-v_uv_coords).r;
+           float noise = texture(moon_mask, v_uv_coords).r;
+           float mask = texture(moon_mask, v_uv_coords).g;
 
            float stepMin = time;
            float stepMax = stepMin + 0.05;

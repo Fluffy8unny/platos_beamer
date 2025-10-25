@@ -206,7 +206,7 @@ impl SkullGame {
                 &moon.moon_vb,
                 &moon.moon_idxb,
                 &self.programs["moon_program"],
-                &uniform! {moon_textures: &self.texture_arrays["moon_textures"],time: moon.moon.get_life_fraction()},
+                &uniform! {moon_texture: &self.textures["moon_texture"],moon_mask: &self.textures["moon"],time: moon.moon.get_life_fraction()},
                 &params,
             )?),
             None => Err(Self::get_boxed_opencv_error("Moon", 3)),
