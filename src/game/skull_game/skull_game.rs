@@ -188,7 +188,7 @@ impl SkullGame {
                         &live.live_view_vb,
                         &live.live_view_ib,
                         &self.programs["live_program"],
-                    &uniform! { live_tex: mat, clouds: &self.textures["clouds"], clouds2: &self.textures["clouds2"], time: timestep.runtime*0.001 },
+                    &uniform! { live_tex: mat, moon_texture: &self.textures["moon_texture"],clouds: &self.textures["clouds"], clouds2: &self.textures["clouds2"], time: timestep.runtime*0.001 },
                         params,
                     )?
                 };

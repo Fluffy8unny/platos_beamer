@@ -20,15 +20,40 @@ fragment="""
       uniform sampler2D live_tex;
       uniform sampler2D clouds;
       uniform sampler2D clouds2;
+      uniform sampler2D moon_texture;
       uniform float time;
 
       out vec4 color;
       
+      vec2 cvt(vec2 inp){
+        return inp/2.0 + 0.5;
+        }
       void main(){ 
-         float df  = 0.002*sin(time*10 + uv_coords.y*200);
+         //water
+         float df  = 0.004*sin(time*10 + uv_coords.y*250);
          float dy = (1.0-smoothstep(0.4,0.6,uv_coords.y))*df;
-         float val = texture(live_tex, vec2(uv_coords.x +dy, uv_coords.y)).x;   
+         float uvx = uv_coords.x + dy;
+         float val = texture(live_tex, vec2(uvx, uv_coords.y)).x;   
 
+         //moonlight shadow
+         vec2 moon_pos = vec2(0.0,-0.35);
+         vec2 moon_scale = vec2(0.15,0.15);
+         vec2 moon_start = cvt(moon_pos-moon_scale);
+         vec2 moon_end = cvt(moon_pos+moon_scale);
+         
+         vec2 muv =(vec2(uvx,uv_coords.y)- moon_start)/(moon_scale);
+         float invy = 1.0 - muv.y;
+         float linscale = invy/10.0;
+         float moon_val = 0.0;
+         vec2 mx = (vec2(uvx+linscale,uv_coords.y)- moon_start)/(moon_scale+2*linscale);
+         if (uvx>moon_start.x - linscale && uvx<moon_end.x+linscale){
+           if(uv_coords.y>moon_start.y && uv_coords.y<moon_end.y){
+             moon_val = texture(moon_texture,vec2(mx.x,invy)).r * muv.y;
+             }
+         }
+         
+
+         //clouds
          float offset_x = uv_coords.x + time/22.0;
          float offset_y = uv_coords.y +  time/45.0;
 
@@ -38,12 +63,12 @@ fragment="""
          float cloud_offsetet = texture(clouds2, vec2(offset_x, offset_y)).x;
          float cloud_offsetett = texture(clouds2, vec2(offset_x, offset_y)).y;
          float cloud_offsetett2 = texture(clouds2, vec2(offset2_x, offset2_y)).z;
-
          float cloud_val = texture(clouds, uv_coords).y;
 
+         //composing
          float alpha = 1.0-0.5*( uv_coords.y + 1.0);
          float cloud_level = cloud_val*cloud_offsetet*cloud_offsetett*cloud_offsetett2;
          val = val*(cloud_val+0.1)*0.6+cloud_level*0.3;
-         color =  vec4(cloud_level*2,val,val,alpha);
+         color =  vec4(cloud_level*2+ moon_val,val,val,alpha*sqrt(alpha));
       }
       """

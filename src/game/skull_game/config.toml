@@ -37,22 +37,22 @@ sound_settings = [
 ]
 
 [skull_settings]
-spawn_rate = 1.0
-max_number = 50
-scale_speed = 0.06
-move_speed = 0.1
-start_scale = 0.1
-hitable_from = 0.1
-max_scale = 0.3
-threshold = 0.1
-x_start = [-0.5, 0.5]
-y_start = [-0.5, 0.5]
-rot = [-0.4, 0.4]
+  spawn_rate = 1.0
+  max_number = 50
+  scale_speed = 0.06
+  move_speed = 0.1
+  start_scale = 0.1
+  hitable_from = 0.1
+  max_scale = 0.3
+  threshold = 0.1
+  x_start = [-0.5, 0.5]
+  y_start = [-0.5, 0.5]
+  rot = [-0.4, 0.4]
 
 [moon_settings]
     starting_life=20
-    position=[0.0,0.2]
-    max_position= [0.0, 0.5]
+    position=[0.0,0.35]
+    max_position= [0.0, 0.7]
     scale=0.15
 
 
@@ -101,9 +101,9 @@ textures = [
 mask_color = [130, 70, 200]
 
 [key_settings]
-start_key = "s"
-easy_mode_key = "1"
-normal_mode_key = "2"
+  start_key = "s"
+  easy_mode_key = "1"
+  normal_mode_key = "2"
 
 [particle_settings.escaped] 
     scale=0.04
