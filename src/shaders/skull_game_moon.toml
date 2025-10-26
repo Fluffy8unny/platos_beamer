@@ -46,7 +46,7 @@ fragment="""
            float stepBorderEnd = stepMin + 0.04;
            float mixSmooth = mask * (1.0 - smoothstep(stepMin, stepMax, noise));
             
-           vec3 color = luminosity* vec3(1.0, time,time);
+           vec3 color = luminosity* vec3(1.0,1.0-time,1.0-time);
            vec3 colorOverlay = vec3(0.8, 0.2, 0.0);
            vec3 colorBorder = vec3(1.0, 0.2, 0.0);
            float mixBorder = mask * (1.0 - max(

@@ -138,7 +138,7 @@ pub fn update_moon_data(
     Ok(MoonData {
         moon_vb,
         moon_idxb,
-        moon: moon_data.moon.clone(),
+        moon: moon_data.moon,
     })
 }
 

@@ -384,7 +384,9 @@ impl GameTrait for SkullGame {
     ) -> Result<(), Box<dyn std::error::Error>> {
         //particles for pos visialization
         if let Some(mask) = &self.mask {
-            if let Ok(mut motion_particles) = spawn_based_on_mask(mask, 800) {
+            if let Ok(mut motion_particles) =
+                spawn_based_on_mask(mask, self.settings.particle_settings.visualization.number)
+            {
                 if let Some(particle_data) = &mut self.particle_data {
                     particle_data.particles.append(&mut motion_particles);
                 }
