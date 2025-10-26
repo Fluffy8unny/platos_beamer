@@ -1,0 +1,48 @@
+
+name = "skull_game_corona_shader"
+
+vertex="""
+     #version 330
+
+      in vec2 position;
+      in vec2 uv;
+      in float blend_value;
+      in float texture_id;
+      
+      out vec2 v_uv_coords;
+
+      void main() {
+          v_uv_coords = uv;
+          gl_Position = vec4(position, 0.0, 1.0);
+      }
+     """ 
+
+fragment="""
+      #version 330  
+
+      in vec2 v_uv_coords;
+
+      uniform float time;
+      uniform float life;
+      
+      out vec4 frag_color;
+  
+      void main(){ 
+        float x = 2.0*(v_uv_coords.x-0.5);
+        float y = 2.0*(v_uv_coords.y-0.5);
+        float r = sqrt(x*x+y*y);
+
+        float f = 2.0;
+        float f2 = 7.0;
+        float f3 = 1.0;
+        
+        float phi = atan(y,x);
+        float mod = sin(phi*f+time/f) * sin(phi*f2+time/f2) * sin(phi*f3+time/f3);
+        
+        
+        float mix = r + 0.05*mod;
+        float v = 1.0-smoothstep(0.8,1.0,mix);
+        float d = 1.0-smoothstep(0.6,0.9,mix);
+        frag_color =  vec4(v,d,0.0,v);
+     }
+      """

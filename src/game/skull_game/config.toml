@@ -12,6 +12,10 @@ shader_settings = [
         "src/shaders/skull_game_live.toml",
     ],
     [
+        "corona_program",
+        "src/shaders/skull_game_corona.toml",
+    ],
+    [
         "moon_program",
         "src/shaders/skull_game_moon.toml",
     ],

@@ -36,6 +36,7 @@ implement_vertex!(MoonVertex, position, uv, texture_id, blend_value,);
 
 pub fn create_moon_vertex_buffer(
     moon: &Moon,
+    scale: f32,
     display: &DisplayType,
 ) -> Result<(glium::VertexBuffer<MoonVertex>, glium::IndexBuffer<u32>), Box<dyn std::error::Error>>
 {
@@ -44,26 +45,27 @@ pub fn create_moon_vertex_buffer(
     let mut moon_ib: Vec<u32> = Vec::with_capacity(4);
     let blend_value = moon.get_life_fraction();
     let position = moon.current_position;
+    let final_scale = moon.scale * scale;
     {
         let moon_vb = &mut moon_vertex_buffer.map();
 
-        moon_vb[0].position[0] = position.0 - moon.scale;
-        moon_vb[0].position[1] = position.1 + moon.scale;
+        moon_vb[0].position[0] = position.0 - final_scale;
+        moon_vb[0].position[1] = position.1 + final_scale;
         moon_vb[0].uv[0] = 0_f32;
         moon_vb[0].uv[1] = 0_f32;
 
-        moon_vb[1].position[0] = position.0 + moon.scale;
-        moon_vb[1].position[1] = position.1 + moon.scale;
+        moon_vb[1].position[0] = position.0 + final_scale;
+        moon_vb[1].position[1] = position.1 + final_scale;
         moon_vb[1].uv[0] = 1_f32;
         moon_vb[1].uv[1] = 0_f32;
 
-        moon_vb[2].position[0] = position.0 - moon.scale;
-        moon_vb[2].position[1] = position.1 - moon.scale;
+        moon_vb[2].position[0] = position.0 - final_scale;
+        moon_vb[2].position[1] = position.1 - final_scale;
         moon_vb[2].uv[0] = 0_f32;
         moon_vb[2].uv[1] = 1_f32;
 
-        moon_vb[3].position[0] = position.0 + moon.scale;
-        moon_vb[3].position[1] = position.1 - moon.scale;
+        moon_vb[3].position[0] = position.0 + final_scale;
+        moon_vb[3].position[1] = position.1 - final_scale;
         moon_vb[3].uv[0] = 1_f32;
         moon_vb[3].uv[1] = 1_f32;
 
@@ -133,11 +135,14 @@ pub fn update_moon_data(
     moon_data: &MoonData,
     display: &DisplayType,
 ) -> Result<MoonData, Box<dyn std::error::Error>> {
-    let (moon_vb, moon_idxb) = create_moon_vertex_buffer(&moon_data.moon, display)?;
+    let (moon_vb, moon_idxb) = create_moon_vertex_buffer(&moon_data.moon, 1_f32, display)?;
+    let (corona_vb, corona_idxb) = create_moon_vertex_buffer(&moon_data.moon, 1.25_f32, display)?;
 
     Ok(MoonData {
         moon_vb,
         moon_idxb,
+        corona_vb,
+        corona_idxb,
         moon: moon_data.moon,
     })
 }
@@ -145,5 +150,7 @@ pub fn update_moon_data(
 pub struct MoonData {
     pub moon_vb: VertexBuffer<MoonVertex>,
     pub moon_idxb: IndexBuffer<u32>,
+    pub corona_vb: VertexBuffer<MoonVertex>,
+    pub corona_idxb: IndexBuffer<u32>,
     pub moon: Moon,
 }

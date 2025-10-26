@@ -187,7 +187,7 @@ impl SkullGame {
                         &live.live_view_ib,
                         &self.programs["live_program"],
                     &uniform! { live_tex: mat, clouds: &self.textures["clouds"], clouds2: &self.textures["clouds2"], time: timestep.runtime*0.001 },
-                        &params,
+                        params,
                     )?
                 };
                 Ok(())
@@ -200,15 +200,26 @@ impl SkullGame {
         &mut self,
         frame: &mut glium::Frame,
         params: &glium::DrawParameters,
+        timestep: &TimeStep,
     ) -> Result<(), Box<dyn std::error::Error>> {
         match &mut self.moon_data {
-            Some(moon) => Ok(frame.draw(
+            Some(moon) => {
+                frame.draw(
+                    &moon.corona_vb,
+                    &moon.corona_idxb,
+                    &self.programs["corona_program"],
+                    &uniform! {time: timestep.runtime/1000_f32,life: moon.moon.get_life_fraction()},
+                    params,
+                )?;
+                frame.draw(
                 &moon.moon_vb,
                 &moon.moon_idxb,
                 &self.programs["moon_program"],
                 &uniform! {moon_texture: &self.textures["moon_texture"],moon_mask: &self.textures["moon"],time: moon.moon.get_life_fraction()},
-                &params,
-            )?),
+                params,
+            )?;
+                Ok(())
+            }
             None => Err(Self::get_boxed_opencv_error("Moon", 3)),
         }
     }
@@ -223,7 +234,7 @@ impl SkullGame {
             ..Default::default()
         };
         self.draw_live(frame, &params, timestep)?;
-        self.draw_moon(frame, &params)
+        self.draw_moon(frame, &params, timestep)
     }
 
     fn draw_victory(&mut self, frame: &mut glium::Frame) -> Result<(), Box<dyn std::error::Error>> {
@@ -249,7 +260,7 @@ impl SkullGame {
             ..Default::default()
         };
         self.draw_live(frame, &params, timestep)?;
-        self.draw_moon(frame, &params)?;
+        self.draw_moon(frame, &params, timestep)?;
 
         match &self.skull_data {
             Some(skulls) => Ok(frame.draw(
@@ -300,10 +311,13 @@ impl GameTrait for SkullGame {
         config: PlatoConfig,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let moon = Moon::new(self.settings.moon_settings.clone());
-        let (moon_vb, moon_idxb) = create_moon_vertex_buffer(&moon, display)?;
+        let (moon_vb, moon_idxb) = create_moon_vertex_buffer(&moon, 1_f32, display)?;
+        let (corona_vb, corona_idxb) = create_moon_vertex_buffer(&moon, 1.25_f32, display)?;
         self.moon_data = Some(MoonData {
             moon_vb,
             moon_idxb,
+            corona_vb,
+            corona_idxb,
             moon,
         });
 
