@@ -35,6 +35,6 @@ fragment="""
         float r = sqrt(x*x+y*y);
 
         float blend = 1.0-smoothstep(0.1,0.8,r);
-        color =  vec4(v_color,blend);
+        color =  vec4(v_color,blend*blend*v_blenc_value);
          }
       """

@@ -71,9 +71,9 @@ pub fn create_particle_vertex_buffer(
         vb_entry[3].uv[0] = 1_f32;
         vb_entry[3].uv[1] = 1_f32;
 
-        for i in 0..4 {
-            vb_entry[i].color = [particle.color.0, particle.color.1, particle.color.2];
-            vb_entry[i].blend_value = particle.opacity;
+        for entry in vb_entry.iter_mut().take(4) {
+            entry.color = [particle.color.0, particle.color.1, particle.color.2];
+            entry.blend_value = particle.opacity;
         }
 
         generate_index_for_quad(i, index_buffer_data);
@@ -173,6 +173,7 @@ pub fn generate_random_particles_around_point(
     area: f32,
     target: Target,
     max_initial_speed: f32,
+    opacity: f32,
     color: (f32, f32, f32),
     scale: f32,
     number: usize,
@@ -185,12 +186,12 @@ pub fn generate_random_particles_around_point(
         let v_0: (f32, f32) = (q.0 - point.0, q.1 - point.1);
         let vary = randomizer.random_range(0.5_f32..1.3_f32);
         let v_norm = vary * max_initial_speed / (v_0.0 * v_0.0 + v_0.1 * v_0.1).sqrt();
-
+        let size_vary = randomizer.random_range(0.5_f32..1.5_f32);
         let particle = Particle::new(
             q,
-            scale,
+            scale * size_vary,
             color,
-            1.0,
+            opacity,
             (v_0.0 * v_norm, v_0.1 * v_norm),
             target,
             update_gravity_particle,
@@ -204,6 +205,7 @@ pub fn generate_random_repulsed_particles_around_point(
     point: (f32, f32),
     area: f32,
     max_initial_speed: f32,
+    opacity: f32,
     color: (f32, f32, f32),
     scale: f32,
     number: usize,
@@ -220,12 +222,13 @@ pub fn generate_random_repulsed_particles_around_point(
         };
         let v_0 = (q.0 - point.0, q.1 - point.1);
         let vary = randomizer.random_range(0.5_f32..1.0_f32);
+        let size_vary = randomizer.random_range(0.5_f32..1.5_f32);
         let v_norm = vary * max_initial_speed / (v_0.0 * v_0.0 + v_0.1 * v_0.1).sqrt();
         let particle = Particle::new(
             q,
-            scale,
+            scale * size_vary,
             color,
-            1.0,
+            opacity,
             (v_0.0 * v_norm, v_0.1 * v_norm),
             target,
             update_repulsed_particle,

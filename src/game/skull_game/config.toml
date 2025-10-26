@@ -108,14 +108,14 @@ normal_mode_key = "2"
 [particle_settings.escaped] 
     scale=0.04
     color=[1.0, 0.0, 0.0]
-    opacity=1.0
+    opacity=0.75
     initial_velocity = 1.0
     number= 1200
 
 [particle_settings.killed]
-    scale=0.01
+    scale=0.02
     color=[0.0, 1.0, 1.0]
-    opacity=1.0
+    opacity=0.75
     initial_velocity = 1.7
     number= 2000
 
