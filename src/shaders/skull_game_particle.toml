@@ -30,9 +30,11 @@ fragment="""
       out vec4 color;
       
       void main(){ 
-           float blend_x = (1.0 - abs(v_uv_coords.x));
-           float blend_y = (1.0 - abs(v_uv_coords.y));
-           float blend = 0.2*v_blenc_value*(blend_x*blend_x + blend_y*blend_y);
-           color =  vec4(v_color,blend);
+        float x = v_uv_coords.x;
+        float y = v_uv_coords.y;
+        float r = sqrt(x*x+y*y);
+
+        float blend = 1.0-smoothstep(0.1,0.8,r);
+        color =  vec4(v_color,blend);
          }
       """

@@ -37,7 +37,6 @@ pub fn spawn_based_on_mask(
             let x = randomizer.random_range(-1_f32..1_f32);
 
             let o = 1.0 - x.abs();
-            println!("{:?}", o);
             Ok(Particle::new(
                 (gl_pos.0, -1.0),
                 s,
