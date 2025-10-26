@@ -53,7 +53,7 @@ rot = [-0.4, 0.4]
     starting_life=20
     position=[0.0,0.2]
     max_position= [0.0, 0.5]
-    scale=0.25
+    scale=0.15
 
 
 [texture_settings]

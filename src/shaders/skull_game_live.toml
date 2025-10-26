@@ -25,17 +25,25 @@ fragment="""
       out vec4 color;
       
       void main(){ 
-         float val = texture(live_tex, vec2(uv_coords.x, uv_coords.y)).x;   
+         float df  = 0.002*sin(time*10 + uv_coords.y*200);
+         float dy = (1.0-smoothstep(0.4,0.6,uv_coords.y))*df;
+         float val = texture(live_tex, vec2(uv_coords.x +dy, uv_coords.y)).x;   
 
-         float offset_x = uv_coords.x + time/10.0;
-         float offset_y = uv_coords.y +  time/15.0;
+         float offset_x = uv_coords.x + time/22.0;
+         float offset_y = uv_coords.y +  time/45.0;
+
+         float offset2_x = uv_coords.x - time/20.0;
+         float offset2_y = uv_coords.y - time/30.0;
 
          float cloud_offsetet = texture(clouds2, vec2(offset_x, offset_y)).x;
          float cloud_offsetett = texture(clouds2, vec2(offset_x, offset_y)).y;
+         float cloud_offsetett2 = texture(clouds2, vec2(offset2_x, offset2_y)).z;
+
          float cloud_val = texture(clouds, uv_coords).y;
 
          float alpha = 1.0-0.5*( uv_coords.y + 1.0);
-         val = val*cloud_val+0.5*cloud_val*cloud_offsetet*cloud_offsetett;
-         color =  vec4(val,val*0.3,0.3*val,alpha);
+         float cloud_level = cloud_val*cloud_offsetet*cloud_offsetett*cloud_offsetett2;
+         val = val*(cloud_val+0.1)*0.6+cloud_level*0.3;
+         color =  vec4(cloud_level*2,val,val,alpha);
       }
       """
