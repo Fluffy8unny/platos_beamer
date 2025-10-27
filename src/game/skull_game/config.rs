@@ -65,4 +65,6 @@ pub struct GameSettings {
     pub key_settings: KeySettings,
     pub texture_settings: TextureSettings,
     pub number_of_rounds: u32,
+    pub number_of_kill_sounds: u32,
+    pub number_of_escape_sounds: u32,
 }

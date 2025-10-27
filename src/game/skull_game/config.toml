@@ -27,15 +27,37 @@ shader_settings = [
 
 sound_settings = [
     [
-        "skull_kill_sound",
-        "assets/killed.mp3",
+        "skull_kill_sound_1",
+        "assets/sound/killed_1.wav",
     ],
     [
-        "skull_escaped_sound",
-        "assets/escape.mp3",
+        "skull_kill_sound_2",
+        "assets/sound/killed_2.wav",
+    ],
+    [
+        "skull_kill_sound_3",
+        "assets/sound/killed_3.wav",
+    ],
+    [
+        "skull_escaped_sound_1",
+        "assets/sound/escape_1.wav",
+    ], 
+    [
+        "skull_escaped_sound_2",
+        "assets/sound/escape_2.wav",
+    ],
+    [
+        "skull_escaped_sound_3",
+        "assets/sound/escape_3.wav",
+    ],
+    [
+        "skull_escaped_sound_4",
+        "assets/sound/escape_4.wav",
     ],
 ]
 number_of_rounds = 2
+number_of_kill_sounds = 3
+number_of_escape_sounds = 4
 [skull_settings]
   spawn_rate = 1.0
   max_number = 50

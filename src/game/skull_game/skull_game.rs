@@ -11,9 +11,7 @@ use crate::game::skull_game::particle::{
     generate_random_repulsed_particles_around_point, update_particle_state,
 };
 use crate::game::skull_game::position_visualization::spawn_based_on_mask;
-use crate::game::skull_game::skull::{
-    self, GameEvent, SkullData, SkullSpawner, update_skull_state,
-};
+use crate::game::skull_game::skull::{GameEvent, SkullData, SkullSpawner, update_skull_state};
 use crate::game::skull_game::util::load_texture;
 use crate::game::skull_game::victory::VicotryData;
 use crate::game::sound::{AudioHandler, SoundType};
@@ -25,6 +23,8 @@ use opencv::prelude::*;
 use ::glium::{Surface, uniform};
 use glium::texture::{Texture2d, Texture2dArray};
 use glium::winit::keyboard::Key;
+
+use rand::{Rng, rng};
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -132,6 +132,12 @@ impl SkullGame {
         })
     }
 
+    fn get_random_sound_name(base_name: &str, number_of_sounds: u32) -> String {
+        let mut randomizer = rng();
+        let sound_index = randomizer.random_range(1..=number_of_sounds);
+        format!("{}_{}", base_name, sound_index)
+    }
+
     fn hit_test(&mut self, timestep: &TimeStep) -> Result<(), Box<dyn std::error::Error>> {
         let moon_ref: &mut MoonData = self.moon_data.as_mut().ok_or("moon not defined")?;
         let sound_ref = self.sound.as_ref().ok_or("sound not initialized")?;
@@ -152,7 +158,13 @@ impl SkullGame {
                                     &self.settings.particle_settings.killed,
                                 ));
                             moon_ref.moon.hit(self.difficultiy.player_damage);
-                            sound_ref.play("skull_kill_sound", SoundType::Sfx)?;
+                            sound_ref.play(
+                                &SkullGame::get_random_sound_name(
+                                    "skull_kill_sound",
+                                    self.settings.number_of_kill_sounds,
+                                ),
+                                SoundType::Sfx,
+                            )?;
                         }
                         Some(GameEvent::Escaped { pos, scale }) => {
                             particles.particles.append(
@@ -167,7 +179,13 @@ impl SkullGame {
                                 ),
                             );
                             moon_ref.moon.heal(self.difficultiy.escape_penalty);
-                            sound_ref.play("skull_escaped_sound", SoundType::Sfx)?;
+                            sound_ref.play(
+                                &SkullGame::get_random_sound_name(
+                                    "skull_escaped_sound",
+                                    self.settings.number_of_escape_sounds,
+                                ),
+                                SoundType::Sfx,
+                            )?;
                         }
                         None => {}
                     }
