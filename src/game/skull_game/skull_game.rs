@@ -181,20 +181,23 @@ impl SkullGame {
         params: &glium::DrawParameters,
         timestep: &TimeStep,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        match &mut self.live_view_data {
-            Some(live) => {
+        match (&mut self.live_view_data, &self.moon_data) {
+            (Some(live), Some(moon)) => {
                 if let Some(mat) = live.live_view_texture.lock().unwrap().as_ref() {
                     frame.draw(
                         &live.live_view_vb,
                         &live.live_view_ib,
                         &self.programs["live_program"],
-                    &uniform! { live_tex: mat, moon_texture: &self.textures["moon_texture"],clouds: &self.textures["clouds"], clouds2: &self.textures["clouds2"], time: timestep.runtime*0.001 },
+                        &uniform! { live_tex: mat, moon_texture: &self.textures["moon_texture"],
+                        clouds: &self.textures["clouds"], clouds2: &self.textures["clouds2"],
+                        moon_pos_u: moon.moon.get_position(), moon_scale_u:moon.moon.scale,
+                        time: timestep.runtime*0.001 },
                         params,
                     )?
                 };
                 Ok(())
             }
-            None => Err(Self::get_boxed_opencv_error("Live View", 3)),
+            _ => Err(Self::get_boxed_opencv_error("Live View or Moon", 3)),
         }
     }
 

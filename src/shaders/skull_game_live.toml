@@ -21,6 +21,8 @@ fragment="""
       uniform sampler2D clouds;
       uniform sampler2D clouds2;
       uniform sampler2D moon_texture;
+      uniform vec2 moon_pos_u;
+      uniform float moon_scale_u;
       uniform float time;
 
       out vec4 color;
@@ -36,8 +38,8 @@ fragment="""
          float val = texture(live_tex, vec2(uvx, uv_coords.y)).x;   
 
          //moonlight shadow
-         vec2 moon_pos = vec2(0.0,-0.35);
-         vec2 moon_scale = vec2(0.15,0.15);
+         vec2 moon_pos = vec2(moon_pos_u.x,-moon_pos_u.y);
+         vec2 moon_scale = vec2(moon_scale_u,moon_scale_u);
          vec2 moon_start = cvt(moon_pos-moon_scale);
          vec2 moon_end = cvt(moon_pos+moon_scale);
          
