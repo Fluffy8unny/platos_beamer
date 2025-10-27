@@ -72,13 +72,13 @@ fragment="""
          //composing
          float alpha = 1.0-0.5*( uv_coords.y + 1.0);
          float cloud_level = cloud_val*cloud_offsetet*cloud_offsetett*cloud_offsetett2;
-         val = val*(cloud_val+0.1)*0.6+cloud_level*0.4;
+         val = val*(cloud_val+0.025)*0.6+cloud_level*0.4;
 
-         vec4 sky_color = vec4(texture(sky, vec2(uvx,uv_coords.y)).rgb*0.1, 0.8-alpha*sqrt(alpha));
+         vec4 sky_color = vec4(texture(sky, vec2(uvx,uv_coords.y)).rgb*0.1, 0.8-alpha*alpha);
          vec4 other_color = vec4(cloud_level*2+ moon_val,
                        val,
                        val,
-                       alpha*sqrt(alpha));
+                       alpha*alpha);
          color =  other_color*0.7 + sky_color;
       }
       """

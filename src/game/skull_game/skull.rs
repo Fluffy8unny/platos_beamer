@@ -7,6 +7,7 @@ use crate::{display::timestep::TimeStep, game::skull_game::config::SkullSettings
 
 use ::glium::{IndexBuffer, VertexBuffer};
 use glium::implement_vertex;
+use noise::{NoiseFn, Perlin, Seedable};
 
 #[derive(Debug, Clone, Copy)]
 pub enum SkullState {
@@ -24,13 +25,14 @@ pub struct Skull {
     pub rotation: f32,
     pub state: SkullState,
 
-    pub direction: (f32, f32),
     pub max_scale: f32,
     pub hitable_from: f32,
     pub scale_speed: f32,
     pub move_speed: f32,
     pub threshold: f32,
     pub timer: TimeStep,
+    pub erratic_movement: f32,
+    pub noise: Perlin,
 }
 
 #[derive(Copy, Clone)]
@@ -179,10 +181,11 @@ impl Skull {
     ) -> Result<Option<GameEvent>, Box<dyn std::error::Error>> {
         let time_delta_s = timestep.time_delta / 1000_f32;
         let new_scale = (self.scale + time_delta_s * self.scale_speed).clamp(0_f32, self.max_scale);
-        let new_center = (
-            self.center.0 + time_delta_s * self.direction.0 * self.move_speed,
-            self.center.1 + time_delta_s * self.direction.1 * self.move_speed,
-        );
+        let get_noise = |p| self.noise.get([(p * self.erratic_movement) as f64]) as f32;
+        let (nx, ny) = (get_noise(self.center.0), get_noise(self.center.1));
+        let noise_magnitude = ((nx * nx) + (ny * ny)).sqrt();
+        let update_pos = |p, n| p + time_delta_s * n * self.move_speed / noise_magnitude;
+        let new_center = (update_pos(self.center.0, ny), update_pos(self.center.1, nx));
         self.scale = new_scale;
         self.timer.update();
 
@@ -296,8 +299,6 @@ impl SkullSpawner {
             let y_pos: f32 =
                 randomizer.random_range(self.settings.y_start.0..self.settings.y_start.1);
             let rotation: f32 = randomizer.random_range(self.settings.rot.0..self.settings.rot.1);
-            let pos_magnitude = (x_pos * x_pos + y_pos * y_pos).sqrt();
-            let dir = (x_pos / pos_magnitude, y_pos / pos_magnitude);
 
             let new_skull = Skull {
                 center: (x_pos, y_pos),
@@ -306,11 +307,12 @@ impl SkullSpawner {
                 state: SkullState::Incomming,
                 hitable_from: self.settings.hitable_from,
                 max_scale: self.settings.max_scale,
-                direction: dir,
                 scale_speed: self.settings.scale_speed,
                 move_speed: self.settings.move_speed,
                 threshold: self.settings.threshold,
                 timer: TimeStep::new(),
+                noise: Perlin::new(randomizer.random_range(400..1000)),
+                erratic_movement: self.settings.erratic_movement,
             };
             skulls.push(new_skull);
             self.time_since -= self.settings.spawn_rate;

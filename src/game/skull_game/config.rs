@@ -45,6 +45,7 @@ pub struct SkullSettings {
     pub x_start: (f32, f32),
     pub y_start: (f32, f32),
     pub rot: (f32, f32),
+    pub erratic_movement: f32,
 }
 
 #[derive(Deserialize, Clone)]
