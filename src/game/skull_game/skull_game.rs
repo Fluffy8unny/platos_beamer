@@ -199,8 +199,8 @@ impl SkullGame {
                         &self.programs["live_program"],
                         &uniform! { live_tex: mat, moon_texture: &self.textures["moon_texture"],
                         clouds: &self.textures["clouds"], clouds2: &self.textures["clouds2"],
-                        moon_pos_u: moon.moon.get_position(), moon_scale_u:moon.moon.scale,
-                        time: timestep.runtime*0.001 },
+                        sky: &self.textures["sky"], moon_pos_u: moon.moon.get_position(),
+                        moon_scale_u:moon.moon.scale, time: timestep.runtime*0.001 },
                         params,
                     )?
                 };

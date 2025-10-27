@@ -20,6 +20,7 @@ fragment="""
       uniform sampler2D live_tex;
       uniform sampler2D clouds;
       uniform sampler2D clouds2;
+      uniform sampler2D sky;
       uniform sampler2D moon_texture;
       uniform vec2 moon_pos_u;
       uniform float moon_scale_u;
@@ -53,7 +54,6 @@ fragment="""
              moon_val = texture(moon_texture,vec2(mx.x,invy)).r * muv.y;
              }
          }
-         
 
          //clouds
          float offset_x = uv_coords.x + time/22.0;
@@ -66,11 +66,19 @@ fragment="""
          float cloud_offsetett = texture(clouds2, vec2(offset_x, offset_y)).y;
          float cloud_offsetett2 = texture(clouds2, vec2(offset2_x, offset2_y)).z;
          float cloud_val = texture(clouds, uv_coords).y;
+         
+
 
          //composing
          float alpha = 1.0-0.5*( uv_coords.y + 1.0);
          float cloud_level = cloud_val*cloud_offsetet*cloud_offsetett*cloud_offsetett2;
-         val = val*(cloud_val+0.1)*0.6+cloud_level*0.3;
-         color =  vec4(cloud_level*2+ moon_val,val,val,alpha*sqrt(alpha));
+         val = val*(cloud_val+0.1)*0.6+cloud_level*0.4;
+
+         vec4 sky_color = vec4(texture(sky, vec2(uvx,uv_coords.y)).rgb*0.1, 0.8-alpha*sqrt(alpha));
+         vec4 other_color = vec4(cloud_level*2+ moon_val,
+                       val,
+                       val,
+                       alpha*sqrt(alpha));
+         color =  other_color*0.7 + sky_color;
       }
       """

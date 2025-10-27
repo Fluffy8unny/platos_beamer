@@ -90,6 +90,10 @@ textures = [
         "assets/clouds/noise_2.png",
     ],
     [
+        "sky",
+        "assets/clouds/sky.jpg",
+    ],
+    [
         "moon",
         "assets/moon/moon_mask.png",
     ],
