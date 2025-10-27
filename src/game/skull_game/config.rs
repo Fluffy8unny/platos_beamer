@@ -63,4 +63,5 @@ pub struct GameSettings {
     pub sound_settings: ListToLoad,
     pub key_settings: KeySettings,
     pub texture_settings: TextureSettings,
+    pub number_of_rounds: u32,
 }

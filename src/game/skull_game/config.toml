@@ -35,7 +35,7 @@ sound_settings = [
         "assets/escape.mp3",
     ],
 ]
-
+number_of_rounds = 2
 [skull_settings]
   spawn_rate = 1.0
   max_number = 50

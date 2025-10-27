@@ -11,7 +11,9 @@ use crate::game::skull_game::particle::{
     generate_random_repulsed_particles_around_point, update_particle_state,
 };
 use crate::game::skull_game::position_visualization::spawn_based_on_mask;
-use crate::game::skull_game::skull::{GameEvent, SkullData, SkullSpawner, update_skull_state};
+use crate::game::skull_game::skull::{
+    self, GameEvent, SkullData, SkullSpawner, update_skull_state,
+};
 use crate::game::skull_game::util::load_texture;
 use crate::game::skull_game::victory::VicotryData;
 use crate::game::sound::{AudioHandler, SoundType};
@@ -28,9 +30,16 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone, Copy)]
+struct RoundCounter {
+    round: u32,
+    max_round: u32,
+}
+
+#[derive(Debug, Clone, Copy)]
 enum GameState {
     PreGame,
-    Game,
+    Game(RoundCounter),
+    Intermission(RoundCounter),
     PostGame,
 }
 
@@ -304,6 +313,7 @@ impl SkullGame {
             display,
         )?);
         self.moon_data.as_mut().unwrap().moon.update_position();
+        self.moon_data.as_mut().unwrap().moon.life.update();
         self.moon_data = Some(update_moon_data(self.moon_data.as_ref().unwrap(), display)?);
         Ok(())
     }
@@ -419,22 +429,37 @@ impl GameTrait for SkullGame {
                 self.draw_start(frame, timestep)?;
             }
 
-            GameState::Game => {
+            GameState::Game(round_counter) => {
                 //hit test
                 self.hit_test(timestep)?;
 
-                self.moon_data.as_mut().unwrap().moon.life.update();
                 //update vertex/index buffer particle_data
                 self.update_dynamic_buffers(display)?;
 
                 //draw everything
                 self.draw_entities(frame, timestep)?;
+
                 //check for win condition
-                if let Some(moon_d) = self.moon_data.as_ref() {
+                if let Some(moon_d) = self.moon_data.as_mut() {
                     if moon_d.moon.life.current_value == 0_f32 {
-                        *state = GameState::PostGame;
+                        if round_counter.round + 1 >= self.settings.number_of_rounds {
+                            *state = GameState::PostGame;
+                        } else {
+                            *state = GameState::Intermission(round_counter);
+                            moon_d.moon.heal(moon_d.moon.max_life);
+                            if let Some(skull_d) = self.skull_data.as_mut() {
+                                skull_d.skulls.clear();
+                            }
+                            //todo play really evil laugh sound
+                        }
                     }
                 }
+            }
+
+            GameState::Intermission(_round_counter) => {
+                //just display moon healing press start key to continue
+                self.update_dynamic_buffers(display)?;
+                self.draw_start(frame, timestep)?;
             }
 
             GameState::PostGame => {
@@ -446,16 +471,31 @@ impl GameTrait for SkullGame {
 
     fn key_event(&mut self, event: &Key) {
         let mut state = self.game_state.lock().unwrap();
-        if let GameState::PreGame = *state {
-            match event.as_ref() {
-                Key::Character(val)
-                    if val.to_lowercase() == self.settings.key_settings.start_key =>
-                {
-                    *state = GameState::Game;
+
+        match event.as_ref() {
+            Key::Character(val) => {
+                match &*state {
+                    GameState::PreGame => {
+                        if val.to_lowercase() == self.settings.key_settings.start_key {
+                            *state = GameState::Game(RoundCounter {
+                                round: 0,
+                                max_round: self.settings.number_of_rounds,
+                            });
+                        }
+                    }
+                    GameState::Intermission(round_counter) => {
+                        if val.to_lowercase() == self.settings.key_settings.start_key {
+                            *state = GameState::Game(RoundCounter {
+                                round: round_counter.round + 1,
+                                max_round: self.settings.number_of_rounds,
+                            });
+                        }
+                    }
+                    _ => {} //can;t start game in current state
                 }
-                _ => {}
-            };
-        }
+            }
+            _ => {} //no key event
+        };
 
         match event.as_ref() {
             Key::Character(val) if val == self.settings.key_settings.normal_mode_key => {
