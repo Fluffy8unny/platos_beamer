@@ -7,11 +7,13 @@ use crate::game::skull_game::config::{GameSettings, ParticleSetting};
 use crate::game::skull_game::live_view::LiveViewData;
 use crate::game::skull_game::moon::{Moon, MoonData, create_moon_vertex_buffer, update_moon_data};
 use crate::game::skull_game::particle::{
-    Particle, ParticleData, Target, generate_random_particles_around_point,
+    self, Particle, ParticleData, Target, generate_random_particles_around_point,
     generate_random_repulsed_particles_around_point, update_particle_state,
 };
 use crate::game::skull_game::position_visualization::spawn_based_on_mask;
-use crate::game::skull_game::skull::{GameEvent, SkullData, SkullSpawner, update_skull_state};
+use crate::game::skull_game::skull::{
+    self, GameEvent, SkullData, SkullSpawner, update_skull_state,
+};
 use crate::game::skull_game::util::load_texture;
 use crate::game::skull_game::victory::VicotryData;
 use crate::game::sound::{AudioHandler, SoundType};
@@ -269,7 +271,8 @@ impl SkullGame {
             ..Default::default()
         };
         self.draw_live(frame, &params, timestep)?;
-        self.draw_moon(frame, &params, timestep)
+        self.draw_moon(frame, &params, timestep)?;
+        self.draw_particles(frame, &params)
     }
 
     fn draw_victory(&mut self, frame: &mut glium::Frame) -> Result<(), Box<dyn std::error::Error>> {
@@ -282,6 +285,23 @@ impl SkullGame {
                 &glium::draw_parameters::DrawParameters::default(),
             )?),
             None => Err(Self::get_boxed_opencv_error("Victory", 3)),
+        }
+    }
+
+    fn draw_particles(
+        &mut self,
+        frame: &mut glium::Frame,
+        params: &glium::DrawParameters,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        match &self.particle_data {
+            Some(particles) => Ok(frame.draw(
+                &particles.particle_vb,
+                &particles.particle_idxb,
+                &self.programs["particle_program"],
+                &glium::uniforms::EmptyUniforms,
+                &params,
+            )?),
+            None => Err(Self::get_boxed_opencv_error("Particle", 3)),
         }
     }
 
@@ -308,16 +328,7 @@ impl SkullGame {
             None => Err(Self::get_boxed_opencv_error("Skull",3)),
         }?;
 
-        match &self.particle_data {
-            Some(particles) => Ok(frame.draw(
-                &particles.particle_vb,
-                &particles.particle_idxb,
-                &self.programs["particle_program"],
-                &glium::uniforms::EmptyUniforms,
-                &params,
-            )?),
-            None => Err(Self::get_boxed_opencv_error("Particle", 3)),
-        }
+        self.draw_particles(frame, &params)
     }
 
     fn update_dynamic_buffers(
@@ -469,6 +480,24 @@ impl GameTrait for SkullGame {
                             *state = GameState::Intermission(round_counter);
                             moon_d.moon.heal(moon_d.moon.max_life);
                             if let Some(skull_d) = self.skull_data.as_mut() {
+                                for skull in skull_d.skulls.iter_mut() {
+                                    if let Some(particles) = &mut self.particle_data {
+                                        particles.particles.append(
+                                            &mut Self::spawn_particles_for_skull(
+                                                skull.center,
+                                                skull.scale,
+                                                moon_d.moon.current_position,
+                                                (
+                                                    1.2_f32 * moon_d.moon.scale.0,
+                                                    1.2_f32 * moon_d.moon.scale.1,
+                                                ),
+                                                &self.settings.particle_settings.killed,
+                                            ),
+                                        );
+                                    }
+
+                                    skull.state = skull::SkullState::Killed;
+                                }
                                 skull_d.skulls.clear();
                             }
 
@@ -483,6 +512,12 @@ impl GameTrait for SkullGame {
                 //just display moon healing press start key to continue
                 self.update_dynamic_buffers(display)?;
                 self.draw_start(frame, timestep)?;
+
+                if let Some(particles) = &mut self.particle_data {
+                    for particle in particles.particles.iter_mut() {
+                        particle.update();
+                    }
+                }
             }
 
             GameState::PostGame => {
