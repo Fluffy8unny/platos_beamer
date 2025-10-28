@@ -471,7 +471,9 @@ impl GameTrait for SkullGame {
                             if let Some(skull_d) = self.skull_data.as_mut() {
                                 skull_d.skulls.clear();
                             }
-                            //todo play really evil laugh sound
+
+                            let sound_ref = self.sound.as_ref().ok_or("sound not intitialized")?;
+                            sound_ref.play("intermission", SoundType::Sfx)?;
                         }
                     }
                 }
@@ -493,29 +495,26 @@ impl GameTrait for SkullGame {
     fn key_event(&mut self, event: &Key) {
         let mut state = self.game_state.lock().unwrap();
 
-        match event.as_ref() {
-            Key::Character(val) => {
-                match &*state {
-                    GameState::PreGame => {
-                        if val.to_lowercase() == self.settings.key_settings.start_key {
-                            *state = GameState::Game(RoundCounter {
-                                round: 0,
-                                max_round: self.settings.number_of_rounds,
-                            });
-                        }
+        if let Key::Character(val) = event.as_ref() {
+            match &*state {
+                GameState::PreGame => {
+                    if val.to_lowercase() == self.settings.key_settings.start_key {
+                        *state = GameState::Game(RoundCounter {
+                            round: 0,
+                            max_round: self.settings.number_of_rounds,
+                        });
                     }
-                    GameState::Intermission(round_counter) => {
-                        if val.to_lowercase() == self.settings.key_settings.start_key {
-                            *state = GameState::Game(RoundCounter {
-                                round: round_counter.round + 1,
-                                max_round: self.settings.number_of_rounds,
-                            });
-                        }
-                    }
-                    _ => {} //can;t start game in current state
                 }
+                GameState::Intermission(round_counter) => {
+                    if val.to_lowercase() == self.settings.key_settings.start_key {
+                        *state = GameState::Game(RoundCounter {
+                            round: round_counter.round + 1,
+                            max_round: self.settings.number_of_rounds,
+                        });
+                    }
+                }
+                _ => {} //can;t start game in current state
             }
-            _ => {} //no key event
         };
 
         match event.as_ref() {

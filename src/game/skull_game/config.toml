@@ -54,6 +54,10 @@ sound_settings = [
         "skull_escaped_sound_4",
         "assets/sound/escape_4.wav",
     ],
+    [
+        "intermission",
+        "assets/sound/intermission.mp3",
+    ],
 ]
 number_of_rounds = 2
 number_of_kill_sounds = 3
