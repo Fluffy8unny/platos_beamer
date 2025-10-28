@@ -76,7 +76,7 @@ number_of_escape_sounds = 4
     starting_life=20
     position=[0.0,0.35]
     max_position= [0.0, 0.7]
-    scale=0.15
+    scale=[0.1,0.17]
 
 
 [texture_settings]

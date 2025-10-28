@@ -12,7 +12,7 @@ use crate::game::skull_game::util::generate_index_for_quad;
 pub struct Target {
     pub center: (f32, f32),
     pub gravity: f32,
-    pub size: f32,
+    pub size: (f32, f32),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -83,12 +83,19 @@ pub fn create_particle_vertex_buffer(
 fn get_dt(particle: &Particle) -> f32 {
     particle.timer.time_delta / 1000_f32
 }
-
 fn get_distance_to_target(particle: &Particle) -> (f32, f32) {
     (
         particle.target.center.0 - particle.center.0,
         particle.target.center.1 - particle.center.1,
     )
+}
+fn check_in_ellipsis(particle: &Particle) -> bool {
+    let dx = (particle.target.center.0 - particle.center.0);
+    let dy = particle.target.center.1 - particle.center.1;
+
+    (dx * dx) / (particle.target.size.0 * particle.target.size.0)
+        + (dy * dy) / (particle.target.size.1 * particle.target.size.1)
+        <= 1_f32
 }
 
 fn magnitude(vector: (f32, f32)) -> f32 {
@@ -110,13 +117,12 @@ fn update_particle_based_on_acceleration(
 
 pub fn update_gravity_particle(particle: &mut Particle) {
     let dt = get_dt(particle);
-    let dx = get_distance_to_target(particle);
 
-    let magnitude_dx = magnitude(dx);
-    if magnitude_dx < particle.target.size {
+    if check_in_ellipsis(particle) {
         particle.state = ParticleState::ToRemove;
     }
-
+    let dx = get_distance_to_target(particle);
+    let magnitude_dx = magnitude(dx);
     let dv = (
         dx.0 * particle.target.gravity / magnitude_dx,
         dx.1 * particle.target.gravity / magnitude_dx,
@@ -218,7 +224,7 @@ pub fn generate_random_repulsed_particles_around_point(
         let target = Target {
             center: point,
             gravity: 1_f32,
-            size: 1_f32,
+            size: (1_f32, 1_f32),
         };
         let v_0 = (q.0 - point.0, q.1 - point.1);
         let vary = randomizer.random_range(0.5_f32..1.0_f32);

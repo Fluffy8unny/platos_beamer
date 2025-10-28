@@ -105,7 +105,7 @@ impl SkullGame {
         pos: (f32, f32),
         skull_scale: f32,
         target_pos: (f32, f32),
-        target_scale: f32,
+        target_scale: (f32, f32),
         settings: &ParticleSetting,
     ) -> Vec<Particle> {
         let target = Target {
@@ -154,7 +154,10 @@ impl SkullGame {
                                     pos,
                                     skull_scale,
                                     moon_ref.moon.current_position,
-                                    moon_ref.moon.scale * 1.2,
+                                    (
+                                        1.2_f32 * moon_ref.moon.scale.0,
+                                        1.2_f32 * moon_ref.moon.scale.1,
+                                    ),
                                     &self.settings.particle_settings.killed,
                                 ));
                             moon_ref.moon.hit(self.difficultiy.player_damage);
@@ -218,7 +221,7 @@ impl SkullGame {
                         &uniform! { live_tex: mat, moon_texture: &self.textures["moon_texture"],
                         clouds: &self.textures["clouds"], clouds2: &self.textures["clouds2"],
                         sky: &self.textures["sky"], moon_pos_u: moon.moon.get_position(),
-                        moon_scale_u:moon.moon.scale, time: timestep.runtime*0.001 },
+                        moon_scale:moon.moon.scale, time: timestep.runtime*0.001 },
                         params,
                     )?
                 };

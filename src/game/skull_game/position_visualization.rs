@@ -29,7 +29,7 @@ pub fn spawn_based_on_mask(
             let target = Target {
                 center: (gl_pos.0, 1.0),
                 gravity: 1.0,
-                size: 0.1,
+                size: (0.1, 0.1),
             };
 
             let v = randomizer.random_range(3.7_f32..9.3_f32);

@@ -22,7 +22,7 @@ pub struct MoonSettings {
     pub starting_life: u32,
     pub position: (f32, f32),
     pub max_position: (f32, f32),
-    pub scale: f32,
+    pub scale: (f32, f32),
 }
 
 #[derive(Deserialize, Clone)]

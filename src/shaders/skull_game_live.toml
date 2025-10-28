@@ -23,7 +23,7 @@ fragment="""
       uniform sampler2D sky;
       uniform sampler2D moon_texture;
       uniform vec2 moon_pos_u;
-      uniform float moon_scale_u;
+      uniform vec2 moon_scale;
       uniform float time;
 
       out vec4 color;
@@ -33,14 +33,15 @@ fragment="""
         }
       void main(){ 
          //water
-         float df  = 0.004*sin(time*10 + uv_coords.y*250);
-         float dy = (1.0-smoothstep(0.4,0.6,uv_coords.y))*df;
+         float middle =abs( uv_coords.x-0.5);
+         float sinv =sin(time*10 + (middle*middle+uv_coords.y)*250);
+         float df  = uv_coords.y*0.01*sinv;
+         float dy = (1.0-smoothstep(0.4,0.5,uv_coords.y))*df;
          float uvx = uv_coords.x + dy;
          float val = texture(live_tex, vec2(uvx, uv_coords.y)).x;   
 
          //moonlight shadow
          vec2 moon_pos = vec2(moon_pos_u.x,-moon_pos_u.y);
-         vec2 moon_scale = vec2(moon_scale_u,moon_scale_u);
          vec2 moon_start = cvt(moon_pos-moon_scale);
          vec2 moon_end = cvt(moon_pos+moon_scale);
          
@@ -49,9 +50,12 @@ fragment="""
          float linscale = invy/10.0;
          float moon_val = 0.0;
          vec2 mx = (vec2(uvx+linscale,uv_coords.y)- moon_start)/(moon_scale+2*linscale);
+
          if (uvx>moon_start.x - linscale && uvx<moon_end.x+linscale){
            if(uv_coords.y>moon_start.y && uv_coords.y<moon_end.y){
              moon_val = texture(moon_texture,vec2(mx.x,invy)).r * muv.y;
+             float attunement =(1.0+sinv )/2.0;
+             moon_val *= attunement*0.5 +0.5;
              }
          }
 
@@ -67,14 +71,13 @@ fragment="""
          float cloud_offsetett2 = texture(clouds2, vec2(offset2_x, offset2_y)).z;
          float cloud_val = texture(clouds, uv_coords).y;
          
-
-
          //composing
          float alpha = 1.0-0.5*( uv_coords.y + 1.0);
          float cloud_level = cloud_val*cloud_offsetet*cloud_offsetett*cloud_offsetett2;
-         val = val*(cloud_val+0.025)*0.6+cloud_level*0.4;
+         val = val*(cloud_val+0.05)*0.6+cloud_level*0.4;
 
-         vec4 sky_color = vec4(texture(sky, vec2(uvx,uv_coords.y)).rgb*0.1, 0.8-alpha*alpha);
+         float mirrored_sky = uv_coords.y < 0.5 ? uv_coords.y : 1.0 - uv_coords.y;
+         vec4 sky_color = vec4(texture(sky, vec2(uvx,2.0*mirrored_sky)).rgb*0.1, 0.8-alpha*alpha);
          vec4 other_color = vec4(cloud_level*2+ moon_val,
                        val,
                        val,

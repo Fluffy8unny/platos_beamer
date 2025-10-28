@@ -19,7 +19,7 @@ pub struct Moon {
     pub position: (f32, f32),
     pub max_position: (f32, f32),
     pub current_position: (f32, f32),
-    pub scale: f32,
+    pub scale: (f32, f32),
     pub life: Interpolator<f32>,
     pub max_life: u32,
     pub state: MoonState,
@@ -45,27 +45,27 @@ pub fn create_moon_vertex_buffer(
     let mut moon_ib: Vec<u32> = Vec::with_capacity(4);
     let blend_value = moon.get_life_fraction();
     let position = moon.current_position;
-    let final_scale = moon.scale * scale;
+    let final_scale = (moon.scale.0 * scale, moon.scale.1 * scale);
     {
         let moon_vb = &mut moon_vertex_buffer.map();
 
-        moon_vb[0].position[0] = position.0 - final_scale;
-        moon_vb[0].position[1] = position.1 + final_scale;
+        moon_vb[0].position[0] = position.0 - final_scale.0;
+        moon_vb[0].position[1] = position.1 + final_scale.1;
         moon_vb[0].uv[0] = 0_f32;
         moon_vb[0].uv[1] = 0_f32;
 
-        moon_vb[1].position[0] = position.0 + final_scale;
-        moon_vb[1].position[1] = position.1 + final_scale;
+        moon_vb[1].position[0] = position.0 + final_scale.0;
+        moon_vb[1].position[1] = position.1 + final_scale.1;
         moon_vb[1].uv[0] = 1_f32;
         moon_vb[1].uv[1] = 0_f32;
 
-        moon_vb[2].position[0] = position.0 - final_scale;
-        moon_vb[2].position[1] = position.1 - final_scale;
+        moon_vb[2].position[0] = position.0 - final_scale.0;
+        moon_vb[2].position[1] = position.1 - final_scale.1;
         moon_vb[2].uv[0] = 0_f32;
         moon_vb[2].uv[1] = 1_f32;
 
-        moon_vb[3].position[0] = position.0 + final_scale;
-        moon_vb[3].position[1] = position.1 - final_scale;
+        moon_vb[3].position[0] = position.0 + final_scale.0;
+        moon_vb[3].position[1] = position.1 - final_scale.1;
         moon_vb[3].uv[0] = 1_f32;
         moon_vb[3].uv[1] = 1_f32;
 
