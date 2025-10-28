@@ -34,7 +34,7 @@ impl OfSettings {
             poly_n: 5_i32,
             poly_sigma: 1.2_f64,
             flags: 0_i32,
-            threshold: 15.0_f64,
+            threshold: 20.0_f64,
         }
     }
 }

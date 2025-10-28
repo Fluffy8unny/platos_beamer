@@ -77,11 +77,12 @@ fragment="""
          val = val*(cloud_val+0.05)*0.6+cloud_level*0.4;
 
          float mirrored_sky = uv_coords.y < 0.5 ? uv_coords.y : 1.0 - uv_coords.y;
-         vec4 sky_color = vec4(texture(sky, vec2(uvx,2.0*mirrored_sky)).rgb*0.1, 0.8-alpha*alpha);
-         vec4 other_color = vec4(cloud_level*2+ moon_val,
-                       val,
-                       val,
-                       alpha*alpha);
-         color =  other_color*0.7 + sky_color;
+         vec4 sky_color = vec4(texture(sky, vec2(uvx,2.0*mirrored_sky)).rgb*0.1,1.0);
+         float blend_val = alpha*alpha;
+         vec4 other_color = vec4(cloud_level+ moon_val*alpha,
+                       val*alpha,
+                       val*alpha,
+                       1.0);
+         color =  other_color*0.5 + sky_color;
       }
       """

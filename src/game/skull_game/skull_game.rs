@@ -20,6 +20,7 @@ use crate::game::sound::{AudioHandler, SoundType};
 use crate::game::util::load_rgb_image_as_texture;
 use crate::types::game_types::GameTrait;
 
+use glium::DrawParameters;
 use opencv::prelude::*;
 
 use ::glium::{Surface, uniform};
@@ -138,6 +139,13 @@ impl SkullGame {
         let mut randomizer = rng();
         let sound_index = randomizer.random_range(1..=number_of_sounds);
         format!("{}_{}", base_name, sound_index)
+    }
+
+    fn get_draw_params() -> DrawParameters<'static> {
+        glium::DrawParameters {
+            blend: glium::draw_parameters::Blend::alpha_blending(),
+            ..Default::default()
+        }
     }
 
     fn hit_test(&mut self, timestep: &TimeStep) -> Result<(), Box<dyn std::error::Error>> {
@@ -266,13 +274,9 @@ impl SkullGame {
         frame: &mut glium::Frame,
         timestep: &TimeStep,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let params = glium::DrawParameters {
-            blend: glium::draw_parameters::Blend::alpha_blending(),
-            ..Default::default()
-        };
+        let params = Self::get_draw_params();
         self.draw_live(frame, &params, timestep)?;
-        self.draw_moon(frame, &params, timestep)?;
-        self.draw_particles(frame, &params)
+        self.draw_moon(frame, &params, timestep)
     }
 
     fn draw_victory(&mut self, frame: &mut glium::Frame) -> Result<(), Box<dyn std::error::Error>> {
@@ -310,10 +314,7 @@ impl SkullGame {
         frame: &mut glium::Frame,
         timestep: &TimeStep,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let params = glium::DrawParameters {
-            blend: glium::draw_parameters::Blend::alpha_blending(),
-            ..Default::default()
-        };
+        let params = Self::get_draw_params();
         self.draw_live(frame, &params, timestep)?;
         self.draw_moon(frame, &params, timestep)?;
 
@@ -511,13 +512,14 @@ impl GameTrait for SkullGame {
             GameState::Intermission(_round_counter) => {
                 //just display moon healing press start key to continue
                 self.update_dynamic_buffers(display)?;
-                self.draw_start(frame, timestep)?;
-
                 if let Some(particles) = &mut self.particle_data {
                     for particle in particles.particles.iter_mut() {
                         particle.update();
                     }
                 }
+                self.draw_start(frame, timestep)?;
+                let params = Self::get_draw_params();
+                self.draw_particles(frame, &params)?;
             }
 
             GameState::PostGame => {
