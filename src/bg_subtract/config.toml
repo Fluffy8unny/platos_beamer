@@ -1,0 +1,23 @@
+[mog_settings]
+history= 250
+mixtures= 5
+background_ratio= 0.65
+noise_sigma= 5.2
+learning_rate= 0.05
+
+[naive_settings]
+threshold_per_channel= 120.0
+
+[of_settings]
+mode="YDirection"
+scales=3
+win_size=15
+iterations= 3
+poly_n=5
+poly_sigma=1.2
+flags=0
+threshold=20.0
+
+[test_settings]
+test_box_pos=[0, 0]
+test_box_size=[200, 200]

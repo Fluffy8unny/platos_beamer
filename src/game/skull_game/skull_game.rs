@@ -551,7 +551,9 @@ impl GameTrait for SkullGame {
                             round: 0,
                             max_round: self.settings.number_of_rounds,
                         });
-                        let _ = play_start();
+                        if let Err(err) = play_start() {
+                            println!("Error in playing sound {}. Continuing", err)
+                        }
                     }
                 }
                 GameState::Intermission(round_counter) => {

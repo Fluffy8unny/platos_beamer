@@ -7,6 +7,7 @@ device_index=0
 
 [background_subtractor_config]
 subtractor_type = "OpticalFlow"
+settings_path = "src/bg_subtract/config.toml"
 
 [minimap_config]
 show = true

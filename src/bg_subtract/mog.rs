@@ -4,9 +4,11 @@ use opencv::core::greater_than_mat_f64;
 use opencv::core::{Mat, MatExpr, Ptr};
 use opencv::prelude::*;
 
+use serde::Deserialize;
+
 use crate::types::BackgroundSubtractor;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Deserialize, Clone, Copy)]
 pub struct MogSettings {
     history: i32,
     mixtures: i32,

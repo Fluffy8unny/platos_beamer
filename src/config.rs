@@ -11,6 +11,7 @@ pub struct CameraConfig {
 #[derive(Deserialize, Clone)]
 pub struct BgSubConfig {
     pub subtractor_type: SubtractorType,
+    pub settings_path: String,
 }
 
 #[derive(Deserialize, Clone)]

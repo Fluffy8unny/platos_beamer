@@ -4,7 +4,9 @@ use opencv::imgproc;
 use opencv::prelude::*;
 
 use crate::types::BackgroundSubtractor;
+use serde::Deserialize;
 
+#[derive(Deserialize, Clone)]
 pub struct TestSettings {
     test_box_pos: (i32, i32),
     test_box_size: (i32, i32),
@@ -46,7 +48,7 @@ impl BackgroundSubtractor for TestSubtractor {
             imgproc::LINE_AA,
             0,
         )?;
-        return Ok(MatExpr::from_mat(&res)?);
+        MatExpr::from_mat(&res)
     }
 
     fn reset(&mut self, _background_img: Mat) {}

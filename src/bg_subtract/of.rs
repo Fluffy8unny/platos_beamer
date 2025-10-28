@@ -5,8 +5,9 @@ use opencv::core::{
 };
 use opencv::imgproc::{COLOR_BGR2GRAY, cvt_color};
 use opencv::video::calc_optical_flow_farneback;
+use serde::Deserialize;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Deserialize, Clone, Copy)]
 pub struct OfSettings {
     mode: OfOutputType,
     scales: i32,
@@ -18,7 +19,7 @@ pub struct OfSettings {
     threshold: f64,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize)]
 pub enum OfOutputType {
     Magnitude,
     YDirection,

@@ -6,8 +6,7 @@ mod threads;
 mod types;
 
 use crate::bg_subtract::{
-    MogSettings, MogSubtractor, NaiveSettings, NaiveSubtractor, OfSettings, OfSubtractor,
-    TestSettings, TestSubtractor,
+    BGSubtracSettings, MogSubtractor, NaiveSubtractor, OfSubtractor, TestSubtractor,
 };
 use crate::config::{PlatoConfig, load_config};
 use crate::display::start_display;
@@ -24,18 +23,21 @@ use opencv::{Error, Result};
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread;
 
-fn create_bg_selector(selected_type: SubtractorType) -> Result<Box<dyn BackgroundSubtractor>> {
+fn create_bg_selector(
+    selected_type: SubtractorType,
+    settings: BGSubtracSettings,
+) -> Result<Box<dyn BackgroundSubtractor>> {
     Ok(match selected_type {
         SubtractorType::Mog => {
-            Box::new(MogSubtractor::new(MogSettings::default())?) as Box<dyn BackgroundSubtractor>
+            Box::new(MogSubtractor::new(settings.mog_settings)?) as Box<dyn BackgroundSubtractor>
         }
         SubtractorType::Naive => Box::new(NaiveSubtractor {
             background_approximation: Mat::default(),
-            settings: NaiveSettings::default(),
+            settings: settings.naive_settings,
         }) as Box<dyn BackgroundSubtractor>,
-        SubtractorType::OpticalFlow => Box::new(OfSubtractor::new(OfSettings::default())?),
+        SubtractorType::OpticalFlow => Box::new(OfSubtractor::new(settings.of_settings)?),
         SubtractorType::Test => Box::new(TestSubtractor {
-            settings: TestSettings::default(),
+            settings: settings.test_settings,
         }),
     })
 }
@@ -52,6 +54,8 @@ fn create_game(
 
 fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let config: PlatoConfig = load_config("config.toml")?;
+    let subtractor_config: BGSubtracSettings =
+        load_config(&config.background_subtractor_config.settings_path)?;
     let camera_index = config.camera_config.device_index;
     print!("{:?}", camera_index);
     let selector_type = config.background_subtractor_config.subtractor_type.clone();
@@ -87,7 +91,7 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
             image_receiver,
             pipeline_control_receiver,
             result_sender,
-            create_bg_selector(selector_type)?,
+            create_bg_selector(selector_type, subtractor_config)?,
         )
     });
 
