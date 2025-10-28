@@ -58,7 +58,24 @@ sound_settings = [
         "intermission",
         "assets/sound/intermission.mp3",
     ],
+    [
+        "intermission",
+        "assets/sound/intermission.mp3",
+    ],
+    [
+        "go",
+        "assets/sound/go.wav",
+    ],
+    [
+        "finish",
+        "assets/sound/finish.wav",
+    ],
+    [
+        "bgm",
+        "assets/sound/music.mp3",
+    ],
 ]
+
 number_of_rounds = 2
 number_of_kill_sounds = 3
 number_of_escape_sounds = 4

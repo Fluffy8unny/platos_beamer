@@ -323,10 +323,11 @@ impl SkullGame {
                 &skulls.skull_vb,
                 &skulls.skull_idxb,
                 &self.programs["skull_program"],
-                &uniform! { tex: &self.texture_arrays["skull_alive_textures"], tex_killed: &self.texture_arrays["skull_killed_textures"]},
-                &params
+                &uniform! { tex: &self.texture_arrays["skull_alive_textures"],
+                tex_killed: &self.texture_arrays["skull_killed_textures"]},
+                &params,
             )?),
-            None => Err(Self::get_boxed_opencv_error("Skull",3)),
+            None => Err(Self::get_boxed_opencv_error("Skull", 3)),
         }?;
 
         self.draw_particles(frame, &params)
@@ -475,8 +476,11 @@ impl GameTrait for SkullGame {
                 //check for win condition
                 if let Some(moon_d) = self.moon_data.as_mut() {
                     if moon_d.moon.life.current_value == 0_f32 {
+                        let sound_ref = self.sound.as_mut().ok_or("sound not intitialized")?;
+                        sound_ref.stop_bgm();
                         if round_counter.round + 1 >= self.settings.number_of_rounds {
                             *state = GameState::PostGame;
+                            sound_ref.play("finish", SoundType::Sfx)?;
                         } else {
                             *state = GameState::Intermission(round_counter);
                             moon_d.moon.heal(moon_d.moon.max_life);
@@ -501,8 +505,6 @@ impl GameTrait for SkullGame {
                                 }
                                 skull_d.skulls.clear();
                             }
-
-                            let sound_ref = self.sound.as_ref().ok_or("sound not intitialized")?;
                             sound_ref.play("intermission", SoundType::Sfx)?;
                         }
                     }
@@ -531,6 +533,15 @@ impl GameTrait for SkullGame {
 
     fn key_event(&mut self, event: &Key) {
         let mut state = self.game_state.lock().unwrap();
+        let mut play_start = || -> Result<(), Box<dyn std::error::Error>> {
+            if let Some(sound_ref) = self.sound.as_mut() {
+                sound_ref.play("go", SoundType::Sfx)?;
+                sound_ref.start_bgm("bgm".to_string())?;
+                Ok(())
+            } else {
+                Err("sound not initialized".into())
+            }
+        };
 
         if let Key::Character(val) = event.as_ref() {
             match &*state {
@@ -540,6 +551,7 @@ impl GameTrait for SkullGame {
                             round: 0,
                             max_round: self.settings.number_of_rounds,
                         });
+                        let _ = play_start();
                     }
                 }
                 GameState::Intermission(round_counter) => {
@@ -583,6 +595,10 @@ impl GameTrait for SkullGame {
         if let Some(skull_d) = self.skull_data.as_mut() {
             skull_d.skulls.clear();
         }
+
+        if let Some(sound_ref) = self.sound.as_mut() {
+            sound_ref.stop_bgm();
+        };
 
         *self.game_state.lock().unwrap() = GameState::PreGame;
     }
