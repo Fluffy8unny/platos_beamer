@@ -288,6 +288,7 @@ impl SkullGame {
     fn update_dynamic_buffers(
         &mut self,
         display: &DisplayType,
+        time_step: f32,
     ) -> Result<(), Box<dyn std::error::Error>> {
         self.skull_data = Some(update_skull_state(
             self.skull_data.as_ref().unwrap().skulls.clone(),
@@ -299,7 +300,11 @@ impl SkullGame {
             display,
         )?);
 
-        self.moon_data = Some(update_moon_data(self.moon_data.as_mut().unwrap(), display)?);
+        self.moon_data = Some(update_moon_data(
+            self.moon_data.as_mut().unwrap(),
+            display,
+            time_step,
+        )?);
         Ok(())
     }
 
@@ -418,7 +423,7 @@ impl GameTrait for SkullGame {
         &mut self,
         frame: &mut glium::Frame,
         display: &DisplayType,
-        timestep: &TimeStep,
+        time_step: &TimeStep,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let state_mut = self.game_state.clone();
         let mut state = state_mut.lock().unwrap();
@@ -427,7 +432,7 @@ impl GameTrait for SkullGame {
 
         match *state {
             GameState::PreGame => {
-                self.draw_scenary(frame, timestep, 0)?;
+                self.draw_scenary(frame, time_step, 0)?;
             }
             GameState::Game(round_counter) => {
                 if round_counter.round > 0
@@ -437,13 +442,13 @@ impl GameTrait for SkullGame {
                     //update position visulization create shots
                     self.handle_mask()?;
                     //hit test
-                    self.hit_test(timestep)?;
+                    self.hit_test(time_step)?;
                     //update vertex/index buffer particle_data
-                    self.update_dynamic_buffers(display)?;
+                    self.update_dynamic_buffers(display, time_step.time_delta)?;
                 }
 
                 //draw everything
-                self.draw_scenary(frame, timestep, round_counter.round as usize)?;
+                self.draw_scenary(frame, time_step, round_counter.round as usize)?;
                 self.draw_skulls(frame, &params)?;
                 self.draw_particles(frame, &params)?;
 
@@ -470,13 +475,13 @@ impl GameTrait for SkullGame {
 
             GameState::Intermission(round_counter) => {
                 //just display moon healing press start key to continue
-                self.update_dynamic_buffers(display)?;
+                self.update_dynamic_buffers(display, time_step.time_delta)?;
                 if let Some(particles) = &mut self.particle_data {
                     for particle in particles.particles.iter_mut() {
                         particle.update();
                     }
                 }
-                self.draw_scenary(frame, timestep, (round_counter.round + 1) as usize)?;
+                self.draw_scenary(frame, time_step, (round_counter.round + 1) as usize)?;
                 self.draw_particles(frame, &params)?;
             }
             GameState::PostGame(round_counter) => {
@@ -485,7 +490,7 @@ impl GameTrait for SkullGame {
                 {
                     self.draw_victory(frame)?;
                 } else {
-                    self.draw_scenary(frame, timestep, (round_counter.round) as usize)?;
+                    self.draw_scenary(frame, time_step, (round_counter.round) as usize)?;
                 }
             }
         };

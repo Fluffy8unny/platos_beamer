@@ -25,6 +25,7 @@ pub struct MoonSettings {
     pub scale: (f32, f32),
     pub color_overlay: Vec<[f32; 3]>,
     pub corona_color: Vec<[f32; 3]>,
+    pub life_interpolator: f32,
 }
 
 #[derive(Deserialize, Clone)]

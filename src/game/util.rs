@@ -73,6 +73,7 @@ pub fn mat_1c_to_texture_r(
 #[derive(Copy, Clone)]
 pub struct Interpolator<T> {
     pub target_value: T,
+    starting_value: T,
     pub current_value: T,
     interp_speed: T,
 }
@@ -84,6 +85,7 @@ impl<T> Interpolator<T> {
     {
         Self {
             target_value: starting_value,
+            starting_value,
             current_value: starting_value,
             interp_speed,
         }
@@ -104,13 +106,14 @@ impl<T> Interpolator<T> {
         self.target_value = new_target;
     }
 
-    pub fn update(&mut self)
+    pub fn update(&mut self, time_step: T)
     where
         T: Copy
             + std::ops::Sub<Output = T>
             + std::ops::Neg<Output = T>
             + std::ops::AddAssign
             + std::ops::Mul<Output = T>
+            + std::fmt::Debug
             + Default
             + PartialOrd,
     {
@@ -118,11 +121,14 @@ impl<T> Interpolator<T> {
             return;
         }
         let diff = self.target_value - self.current_value;
-        let step = if diff > T::default() {
-            self.interp_speed
-        } else {
-            -self.interp_speed
-        };
+        let step = time_step
+            * self.starting_value
+            * if diff > T::default() {
+                self.interp_speed
+            } else {
+                -self.interp_speed
+            };
+
         if step * step > diff * diff {
             self.current_value = self.target_value;
             return;

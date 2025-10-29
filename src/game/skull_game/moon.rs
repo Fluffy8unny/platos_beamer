@@ -87,7 +87,7 @@ pub fn create_moon_vertex_buffer(
 impl Moon {
     pub fn new(settings: crate::game::skull_game::config::MoonSettings) -> Self {
         Moon {
-            life: Interpolator::new(settings.starting_life as f32, 0.01),
+            life: Interpolator::new(settings.starting_life as f32, settings.life_interpolator),
             max_life: settings.starting_life,
             state: MoonState::Alive,
             position: settings.position,
@@ -133,12 +133,10 @@ impl Moon {
         println!("got healed {:?}", self.life.current_value);
     }
 }
-
-pub fn create_moon_data(
+fn get_moon_data(
+    moon: Moon,
     display: &DisplayType,
-    settings: &MoonSettings,
 ) -> Result<MoonData, Box<dyn std::error::Error>> {
-    let moon = Moon::new(settings.clone());
     let (moon_vb, moon_idxb) = create_moon_vertex_buffer(&moon, 1_f32, display)?;
     let (corona_vb, corona_idxb) = create_moon_vertex_buffer(&moon, 1.25_f32, display)?;
     Ok(MoonData {
@@ -149,24 +147,23 @@ pub fn create_moon_data(
         moon,
     })
 }
+pub fn create_moon_data(
+    display: &DisplayType,
+    settings: &MoonSettings,
+) -> Result<MoonData, Box<dyn std::error::Error>> {
+    let moon = Moon::new(settings.clone());
+    get_moon_data(moon, display)
+}
 
 pub fn update_moon_data(
     moon_data: &mut MoonData,
     display: &DisplayType,
+    time_step: f32,
 ) -> Result<MoonData, Box<dyn std::error::Error>> {
     moon_data.moon.update_position();
-    moon_data.moon.life.update();
+    moon_data.moon.life.update(time_step);
 
-    let (moon_vb, moon_idxb) = create_moon_vertex_buffer(&moon_data.moon, 1_f32, display)?;
-    let (corona_vb, corona_idxb) = create_moon_vertex_buffer(&moon_data.moon, 1.25_f32, display)?;
-
-    Ok(MoonData {
-        moon_vb,
-        moon_idxb,
-        corona_vb,
-        corona_idxb,
-        moon: moon_data.moon.clone(),
-    })
+    get_moon_data(moon_data.moon.clone(), display)
 }
 
 pub struct MoonData {
