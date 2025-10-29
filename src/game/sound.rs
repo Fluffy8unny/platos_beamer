@@ -6,9 +6,15 @@ use rodio::{
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
+use std::time::Duration;
 
 pub type SoundSource = Buffered<Decoder<BufReader<File>>>;
-pub type SoundSourceResult = Result<SoundSource, Box<dyn std::error::Error>>;
+struct SoundData {
+    source: SoundSource,
+    length: Duration,
+}
+
+pub type SoundSourceResult = Result<SoundData, Box<dyn std::error::Error>>;
 pub enum SoundType {
     Sfx,
     Music,
@@ -24,7 +30,14 @@ pub struct AudioHandler {
 fn load_sound_data(path: &str) -> SoundSourceResult {
     let file = File::open(path)?;
     let buff_reader = BufReader::new(file);
-    Ok(Decoder::new(buff_reader)?.buffered())
+    let source = Decoder::new(buff_reader)?;
+    let length = source
+        .total_duration()
+        .ok_or(format!("could not query length for source:{}", path))?;
+    Ok(SoundData {
+        source: source.buffered(),
+        length,
+    })
 }
 
 impl AudioHandler {
@@ -60,6 +73,7 @@ impl AudioHandler {
             .as_ref()
         {
             Ok(res) => res
+                .source
                 .clone()
                 .repeat_infinite()
                 .stoppable()
@@ -79,6 +93,14 @@ impl AudioHandler {
         };
         amp * self.config.master_volume
     }
+
+    pub fn get_duration_ms(&self, name: String) -> Result<f32, Box<dyn std::error::Error>> {
+        match self.sounds.get(&name).ok_or("sound not found")?.as_ref() {
+            Ok(sound_data) => Ok(sound_data.length.as_millis() as f32),
+            Err(_err) => Err(format!("Sound not found {:?}", name).into()),
+        }
+    }
+
     pub fn play(
         &self,
         name: &str,
@@ -86,7 +108,7 @@ impl AudioHandler {
     ) -> Result<(), Box<dyn std::error::Error>> {
         match self.sounds.get(name).ok_or("sound not found")?.as_ref() {
             Ok(sound_data) => {
-                let buffered_source = sound_data.clone();
+                let buffered_source = sound_data.source.clone();
                 self.stream_handle
                     .mixer()
                     .add(buffered_source.amplify_normalized(self.get_volume(sound_type)));

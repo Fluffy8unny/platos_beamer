@@ -24,7 +24,7 @@ fragment="""
 
       uniform float time;
       uniform float life;
-      
+      uniform vec3 corona_color;
       out vec4 frag_color;
   
       void main(){ 
@@ -43,6 +43,8 @@ fragment="""
         float mix = r + 0.05*mod;
         float v = 1.0-smoothstep(0.8,1.0,mix);
         float d = 1.0-smoothstep(0.6,0.9,mix);
-        frag_color =  vec4(v,d,0.0,v);
+        
+        vec3 output_color = vec3(v,d,0.0)*corona_color;
+        frag_color =  vec4(output_color.xyz,v);
      }
       """

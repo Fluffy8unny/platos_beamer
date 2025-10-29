@@ -24,6 +24,7 @@ pub struct MoonSettings {
     pub max_position: (f32, f32),
     pub scale: (f32, f32),
     pub color_overlay: Vec<[f32; 3]>,
+    pub corona_color: Vec<[f32; 3]>,
 }
 
 #[derive(Deserialize, Clone)]
@@ -56,6 +57,18 @@ pub struct KeySettings {
     pub normal_mode_key: String,
 }
 
+#[derive(Deserialize, Clone, Copy)]
+pub struct DifficultySelector {
+    pub player_damage: u32,
+    pub escape_penalty: u32,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct DifficultySettings {
+    pub easy: DifficultySelector,
+    pub normal: DifficultySelector,
+}
+
 #[derive(Deserialize, Clone)]
 pub struct GameSettings {
     pub skull_settings: SkullSettings,
@@ -64,6 +77,7 @@ pub struct GameSettings {
     pub shader_settings: ListToLoad,
     pub sound_settings: ListToLoad,
     pub key_settings: KeySettings,
+    pub difficultiy_settings: DifficultySettings,
     pub texture_settings: TextureSettings,
     pub number_of_rounds: u32,
     pub number_of_kill_sounds: u32,

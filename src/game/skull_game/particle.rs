@@ -1,6 +1,7 @@
 use std::f32::consts::PI;
 
 use crate::display::display_window::DisplayType;
+use crate::game::skull_game::config::ParticleSetting;
 use ::glium::{IndexBuffer, VertexBuffer};
 use glium::implement_vertex;
 use rand::{Rng, rng};
@@ -89,6 +90,7 @@ fn get_distance_to_target(particle: &Particle) -> (f32, f32) {
         particle.target.center.1 - particle.center.1,
     )
 }
+
 fn check_in_ellipsis(particle: &Particle) -> bool {
     let dx = particle.target.center.0 - particle.center.0;
     let dy = particle.target.center.1 - particle.center.1;
@@ -191,7 +193,7 @@ pub fn generate_random_particles_around_point(
         let q = get_random_point_in_area(point, area);
         let v_0: (f32, f32) = (q.0 - point.0, q.1 - point.1);
         let vary = randomizer.random_range(0.5_f32..1.3_f32);
-        let v_norm = vary * max_initial_speed / (v_0.0 * v_0.0 + v_0.1 * v_0.1).sqrt();
+        let v_norm = vary * max_initial_speed / magnitude(v_0);
         let size_vary = randomizer.random_range(0.5_f32..1.5_f32);
         let particle = Particle::new(
             q,
@@ -210,16 +212,12 @@ pub fn generate_random_particles_around_point(
 pub fn generate_random_repulsed_particles_around_point(
     point: (f32, f32),
     area: f32,
-    max_initial_speed: f32,
-    opacity: f32,
-    color: (f32, f32, f32),
-    scale: f32,
-    number: usize,
+    settings: &ParticleSetting,
 ) -> Vec<Particle> {
-    let mut result: Vec<Particle> = Vec::with_capacity(number);
+    let mut result: Vec<Particle> = Vec::with_capacity(settings.number);
     let mut randomizer = rng();
 
-    for _ in 0..number {
+    for _ in 0..settings.number {
         let q = get_random_point_in_area(point, area);
         let target = Target {
             center: point,
@@ -229,12 +227,12 @@ pub fn generate_random_repulsed_particles_around_point(
         let v_0 = (q.0 - point.0, q.1 - point.1);
         let vary = randomizer.random_range(0.5_f32..1.0_f32);
         let size_vary = randomizer.random_range(0.5_f32..1.5_f32);
-        let v_norm = vary * max_initial_speed / (v_0.0 * v_0.0 + v_0.1 * v_0.1).sqrt();
+        let v_norm = vary * settings.initial_velocity / magnitude(v_0);
         let particle = Particle::new(
             q,
-            scale * size_vary,
-            color,
-            opacity,
+            settings.scale * size_vary,
+            settings.color,
+            settings.opacity,
             (v_0.0 * v_norm, v_0.1 * v_norm),
             target,
             update_repulsed_particle,
@@ -244,6 +242,29 @@ pub fn generate_random_repulsed_particles_around_point(
     result
 }
 
+pub fn spawn_particles_for_skull(
+    pos: (f32, f32),
+    skull_scale: f32,
+    target_pos: (f32, f32),
+    target_scale: (f32, f32),
+    settings: &ParticleSetting,
+) -> Vec<Particle> {
+    let target = Target {
+        center: target_pos,
+        gravity: 3.5,
+        size: target_scale,
+    };
+    generate_random_particles_around_point(
+        pos,
+        skull_scale,
+        target,
+        settings.initial_velocity,
+        settings.opacity,
+        settings.color,
+        settings.scale,
+        settings.number,
+    )
+}
 impl Particle {
     pub fn new(
         center: (f32, f32),

@@ -76,33 +76,9 @@ sound_settings = [
     ],
 ]
 
-number_of_rounds = 2
-number_of_kill_sounds = 3
+number_of_rounds        = 2
+number_of_kill_sounds   = 3
 number_of_escape_sounds = 4
-[skull_settings]
-  spawn_rate = 1.0
-  max_number = 50
-  scale_speed = 0.06
-  move_speed = 0.5
-  start_scale = 0.1
-  hitable_from = 0.1
-  max_scale = 0.3
-  threshold = 0.1
-  x_start = [-0.5, 0.5]
-  y_start = [-0.5, 0.5]
-  rot = [-0.4, 0.4]
-  erratic_movement = 4.0
-
-[moon_settings]
-    starting_life=20
-    position=[0.0,0.35]
-    max_position= [0.0, 0.7]
-    scale=[0.1,0.17]
-    color_overlay = [
-        [1.0, 0.5, 0.0],
-        [1.0, 0.0, 0.0],
-        [1.0, 1.0, 1.0],
-    ]
 
 [texture_settings]
 texture_arrays = [
@@ -152,6 +128,38 @@ textures = [
 ]
 mask_color = [130, 70, 200]
 
+[skull_settings]
+    spawn_rate = 1.0
+    max_number = 50
+    scale_speed = 0.06
+    move_speed = 0.5
+    start_scale = 0.1
+    hitable_from = 0.1
+    max_scale = 0.3
+    threshold = 0.1
+    x_start = [-0.5, 0.5]
+    y_start = [-0.5, 0.5]
+    rot = [-0.4, 0.4]
+    erratic_movement = 4.0
+
+[moon_settings]
+    starting_life=20
+    position=[0.0,0.35]
+    max_position= [0.0, 0.7]
+    scale=[0.1,0.17]
+
+    color_overlay = [
+        [1.0, 0.5, 0.0],
+        [1.0, 0.0, 0.0],
+        [1.0, 1.0, 1.0],
+    ]
+
+    corona_color = [
+        [1.0, 1.0, 0.0],
+        [1.0, 1.0, 0.0],
+        [1.0, 1.0, 1.0],
+    ]
+
 [key_settings]
   start_key = "s"
   easy_mode_key = "1"
@@ -177,3 +185,11 @@ mask_color = [130, 70, 200]
     opacity=1.0
     initial_velocity = 1.0
     number= 2000
+
+[difficultiy_settings.easy]
+    player_damage: 5
+    escape_penalty: 0
+
+[difficultiy_settings.normal]
+    player_damage: 1
+    escape_penalty: 1

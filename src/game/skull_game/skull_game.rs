@@ -3,31 +3,30 @@ use crate::display::{display_window::DisplayType, timestep::TimeStep};
 
 use crate::PlatoConfig;
 use crate::game::load_shaders;
-use crate::game::skull_game::config::{GameSettings, ParticleSetting};
+use crate::game::skull_game::config::{DifficultySelector, GameSettings};
 use crate::game::skull_game::live_view::LiveViewData;
-use crate::game::skull_game::moon::{Moon, MoonData, create_moon_vertex_buffer, update_moon_data};
+use crate::game::skull_game::moon::{MoonData, create_moon_data, update_moon_data};
 use crate::game::skull_game::particle::{
-    Particle, ParticleData, Target, generate_random_particles_around_point,
-    generate_random_repulsed_particles_around_point, update_particle_state,
+    ParticleData, generate_random_repulsed_particles_around_point, spawn_particles_for_skull,
+    update_particle_state,
 };
 use crate::game::skull_game::position_visualization::spawn_based_on_mask;
 use crate::game::skull_game::skull::{
     self, GameEvent, SkullData, SkullSpawner, update_skull_state,
 };
-use crate::game::skull_game::util::load_texture;
+use crate::game::skull_game::util::{
+    get_boxed_opencv_error, get_draw_params, get_random_sound_name, load_texture,
+};
 use crate::game::skull_game::victory::VicotryData;
 use crate::game::sound::{AudioHandler, SoundType};
 use crate::game::util::load_rgb_image_as_texture;
 use crate::types::game_types::GameTrait;
 
-use glium::DrawParameters;
 use opencv::prelude::*;
 
 use ::glium::{Surface, uniform};
 use glium::texture::{Texture2d, Texture2dArray};
 use glium::winit::keyboard::Key;
-
-use rand::{Rng, rng};
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -36,6 +35,17 @@ use std::sync::{Arc, Mutex};
 struct RoundCounter {
     round: u32,
     max_round: u32,
+    time_info: TimeStep,
+}
+
+impl RoundCounter {
+    pub fn new(round: u32, settings: &GameSettings) -> RoundCounter {
+        RoundCounter {
+            round,
+            max_round: settings.number_of_rounds,
+            time_info: TimeStep::new(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -43,46 +53,33 @@ enum GameState {
     PreGame,
     Game(RoundCounter),
     Intermission(RoundCounter),
-    PostGame,
-}
-
-struct DiffcultySelector {
-    player_damage: u32,
-    escape_penalty: u32,
-}
-
-impl DiffcultySelector {
-    pub fn default() -> DiffcultySelector {
-        DiffcultySelector {
-            player_damage: 1,
-            escape_penalty: 1,
-        }
-    }
+    PostGame(RoundCounter),
 }
 
 pub struct SkullGame {
+    skull_spawner: SkullSpawner,
     skull_data: Option<SkullData>,
     particle_data: Option<ParticleData>,
     live_view_data: Option<LiveViewData>,
     moon_data: Option<MoonData>,
     victory_data: Option<VicotryData>,
+    sound: Option<AudioHandler>,
 
     programs: HashMap<String, glium::Program>,
     texture_arrays: HashMap<String, Texture2dArray>,
     textures: HashMap<String, Texture2d>,
 
-    skull_spawner: SkullSpawner,
     mask: Option<Mat>,
-    sound: Option<AudioHandler>,
 
     settings: GameSettings,
-    difficultiy: DiffcultySelector,
+    difficultiy: DifficultySelector,
     game_state: Arc<Mutex<GameState>>,
 }
 
 impl SkullGame {
     pub fn new(config_path: &str) -> Result<SkullGame, Box<dyn std::error::Error>> {
         let settings: GameSettings = load_config(config_path)?;
+        let difficulty = settings.difficultiy_settings.normal;
         Ok(SkullGame {
             skull_data: None,
             particle_data: None,
@@ -99,53 +96,9 @@ impl SkullGame {
             mask: None,
             settings,
             sound: None,
-            difficultiy: DiffcultySelector::default(),
+            difficultiy: difficulty,
             game_state: Arc::new(Mutex::new(GameState::PreGame)),
         })
-    }
-
-    fn spawn_particles_for_skull(
-        pos: (f32, f32),
-        skull_scale: f32,
-        target_pos: (f32, f32),
-        target_scale: (f32, f32),
-        settings: &ParticleSetting,
-    ) -> Vec<Particle> {
-        let target = Target {
-            center: target_pos,
-            gravity: 3.5,
-            size: target_scale,
-        };
-        generate_random_particles_around_point(
-            pos,
-            skull_scale,
-            target,
-            settings.initial_velocity,
-            settings.opacity,
-            settings.color,
-            settings.scale,
-            settings.number,
-        )
-    }
-
-    fn get_boxed_opencv_error(name: &str, code: i32) -> Box<opencv::Error> {
-        Box::new(opencv::Error {
-            message: format!("{} data was not initialized", name).to_string(),
-            code,
-        })
-    }
-
-    fn get_random_sound_name(base_name: &str, number_of_sounds: u32) -> String {
-        let mut randomizer = rng();
-        let sound_index = randomizer.random_range(1..=number_of_sounds);
-        format!("{}_{}", base_name, sound_index)
-    }
-
-    fn get_draw_params() -> DrawParameters<'static> {
-        glium::DrawParameters {
-            blend: glium::draw_parameters::Blend::alpha_blending(),
-            ..Default::default()
-        }
     }
 
     fn hit_test(&mut self, timestep: &TimeStep) -> Result<(), Box<dyn std::error::Error>> {
@@ -158,21 +111,20 @@ impl SkullGame {
                 for skull in data.skulls.iter_mut() {
                     match skull.update(&self.mask, timestep)? {
                         Some(GameEvent::Killed { pos, skull_scale }) => {
-                            particles
-                                .particles
-                                .append(&mut Self::spawn_particles_for_skull(
-                                    pos,
-                                    skull_scale,
-                                    moon_ref.moon.current_position,
-                                    (
-                                        1.2_f32 * moon_ref.moon.scale.0,
-                                        1.2_f32 * moon_ref.moon.scale.1,
-                                    ),
-                                    &self.settings.particle_settings.killed,
-                                ));
+                            particles.particles.append(&mut spawn_particles_for_skull(
+                                pos,
+                                skull_scale,
+                                moon_ref.moon.current_position,
+                                (
+                                    1.2_f32 * moon_ref.moon.scale.0,
+                                    1.2_f32 * moon_ref.moon.scale.1,
+                                ),
+                                &self.settings.particle_settings.killed,
+                            ));
                             moon_ref.moon.hit(self.difficultiy.player_damage);
+
                             sound_ref.play(
-                                &SkullGame::get_random_sound_name(
+                                &get_random_sound_name(
                                     "skull_kill_sound",
                                     self.settings.number_of_kill_sounds,
                                 ),
@@ -184,16 +136,12 @@ impl SkullGame {
                                 &mut generate_random_repulsed_particles_around_point(
                                     pos,
                                     scale,
-                                    self.settings.particle_settings.escaped.initial_velocity,
-                                    self.settings.particle_settings.escaped.opacity,
-                                    self.settings.particle_settings.escaped.color,
-                                    self.settings.particle_settings.escaped.scale,
-                                    self.settings.particle_settings.escaped.number,
+                                    &self.settings.particle_settings.escaped,
                                 ),
                             );
                             moon_ref.moon.heal(self.difficultiy.escape_penalty);
                             sound_ref.play(
-                                &SkullGame::get_random_sound_name(
+                                &get_random_sound_name(
                                     "skull_escaped_sound",
                                     self.settings.number_of_escape_sounds,
                                 ),
@@ -209,8 +157,8 @@ impl SkullGame {
                 self.skull_spawner.maybe_spawn(&mut data.skulls, timestep);
                 Ok(())
             }
-            (_, None) => Err(Self::get_boxed_opencv_error("Particle", 3)),
-            (None, _) => Err(Self::get_boxed_opencv_error("Skull", 3)),
+            (_, None) => Err(get_boxed_opencv_error("Particle", 3)),
+            (None, _) => Err(get_boxed_opencv_error("Skull", 3)),
         }?;
         Ok(())
     }
@@ -237,7 +185,7 @@ impl SkullGame {
                 };
                 Ok(())
             }
-            _ => Err(Self::get_boxed_opencv_error("Live View or Moon", 3)),
+            _ => Err(get_boxed_opencv_error("Live View or Moon", 3)),
         }
     }
 
@@ -254,7 +202,9 @@ impl SkullGame {
                     &moon.corona_vb,
                     &moon.corona_idxb,
                     &self.programs["corona_program"],
-                    &uniform! {time: timestep.runtime/1000_f32,life: moon.moon.get_life_fraction()},
+                    &uniform! {time: timestep.runtime / 1000_f32,
+                    life: moon.moon.get_life_fraction(),
+                    corona_color: moon.moon.corona_color[color_selector]},
                     params,
                 )?;
                 frame.draw(
@@ -269,17 +219,17 @@ impl SkullGame {
                 )?;
                 Ok(())
             }
-            None => Err(Self::get_boxed_opencv_error("Moon", 3)),
+            None => Err(get_boxed_opencv_error("Moon", 3)),
         }
     }
 
-    fn draw_start(
+    fn draw_scenary(
         &mut self,
         frame: &mut glium::Frame,
         timestep: &TimeStep,
         round_counter: usize,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let params = Self::get_draw_params();
+        let params = get_draw_params();
         self.draw_live(frame, &params, timestep)?;
         self.draw_moon(frame, &params, timestep, round_counter)
     }
@@ -293,7 +243,7 @@ impl SkullGame {
                 &uniform! {tex:&self.textures["victory_texture"]},
                 &glium::draw_parameters::DrawParameters::default(),
             )?),
-            None => Err(Self::get_boxed_opencv_error("Victory", 3)),
+            None => Err(get_boxed_opencv_error("Victory", 3)),
         }
     }
 
@@ -310,20 +260,15 @@ impl SkullGame {
                 &glium::uniforms::EmptyUniforms,
                 &params,
             )?),
-            None => Err(Self::get_boxed_opencv_error("Particle", 3)),
+            None => Err(get_boxed_opencv_error("Particle", 3)),
         }
     }
 
-    fn draw_entities(
+    fn draw_skulls(
         &mut self,
         frame: &mut glium::Frame,
-        timestep: &TimeStep,
-        round_counter: usize,
+        params: &glium::DrawParameters,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let params = Self::get_draw_params();
-        self.draw_live(frame, &params, timestep)?;
-        self.draw_moon(frame, &params, timestep, round_counter)?;
-
         match &self.skull_data {
             Some(skulls) => Ok(frame.draw(
                 &skulls.skull_vb,
@@ -333,10 +278,8 @@ impl SkullGame {
                 tex_killed: &self.texture_arrays["skull_killed_textures"]},
                 &params,
             )?),
-            None => Err(Self::get_boxed_opencv_error("Skull", 3)),
-        }?;
-
-        self.draw_particles(frame, &params)
+            None => Err(get_boxed_opencv_error("Skull", 3)),
+        }
     }
 
     fn update_dynamic_buffers(
@@ -352,9 +295,8 @@ impl SkullGame {
             self.particle_data.as_ref().unwrap().particles.clone(),
             display,
         )?);
-        self.moon_data.as_mut().unwrap().moon.update_position();
-        self.moon_data.as_mut().unwrap().moon.life.update();
-        self.moon_data = Some(update_moon_data(self.moon_data.as_ref().unwrap(), display)?);
+
+        self.moon_data = Some(update_moon_data(self.moon_data.as_mut().unwrap(), display)?);
         Ok(())
     }
 
@@ -372,24 +314,22 @@ impl SkullGame {
     }
 
     fn kill_all_skulls(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        if let Some(moon_d) = self.moon_data.as_mut() {
-            if let Some(skull_d) = self.skull_data.as_mut() {
-                for skull in skull_d.skulls.iter_mut() {
-                    if let Some(particles) = &mut self.particle_data {
-                        particles
-                            .particles
-                            .append(&mut Self::spawn_particles_for_skull(
-                                skull.center,
-                                skull.scale,
-                                moon_d.moon.current_position,
-                                (1.2_f32 * moon_d.moon.scale.0, 1.2_f32 * moon_d.moon.scale.1),
-                                &self.settings.particle_settings.killed,
-                            ));
-                    }
-                    skull.state = skull::SkullState::Killed;
-                }
-                skull_d.skulls.clear();
+        if let (Some(moon_d), Some(skull_d), Some(particle_d)) = (
+            self.moon_data.as_mut(),
+            self.skull_data.as_mut(),
+            self.particle_data.as_mut(),
+        ) {
+            for skull in skull_d.skulls.iter_mut() {
+                particle_d.particles.append(&mut spawn_particles_for_skull(
+                    skull.center,
+                    skull.scale,
+                    moon_d.moon.current_position,
+                    (1.2_f32 * moon_d.moon.scale.0, 1.2_f32 * moon_d.moon.scale.1),
+                    &self.settings.particle_settings.killed,
+                ));
+                skull.state = skull::SkullState::Killed;
             }
+            skull_d.skulls.clear();
         };
         Ok(())
     }
@@ -401,17 +341,6 @@ impl GameTrait for SkullGame {
         display: &DisplayType,
         config: PlatoConfig,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let moon = Moon::new(self.settings.moon_settings.clone());
-        let (moon_vb, moon_idxb) = create_moon_vertex_buffer(&moon, 1_f32, display)?;
-        let (corona_vb, corona_idxb) = create_moon_vertex_buffer(&moon, 1.25_f32, display)?;
-        self.moon_data = Some(MoonData {
-            moon_vb,
-            moon_idxb,
-            corona_vb,
-            corona_idxb,
-            moon,
-        });
-
         //load shaders
         let mut load_shader_helper =
             |name: String, path: String| -> Result<(), Box<dyn std::error::Error>> {
@@ -444,7 +373,9 @@ impl GameTrait for SkullGame {
             load_single_texture(k, v)?;
         }
 
-        //create statefull entitites
+        //create moon data
+        self.moon_data = Some(create_moon_data(display, &self.settings.moon_settings)?);
+        //create skull data
         self.skull_data = Some(update_skull_state(
             Vec::with_capacity(self.settings.skull_settings.max_number),
             display,
@@ -475,6 +406,7 @@ impl GameTrait for SkullGame {
         display: &DisplayType,
     ) -> Result<(), Box<dyn std::error::Error>> {
         self.mask = Some(mask.clone());
+
         if let Some(lv_ref) = self.live_view_data.as_mut() {
             lv_ref.set_live_view_texture(display, image)?
         };
@@ -489,38 +421,47 @@ impl GameTrait for SkullGame {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let state_mut = self.game_state.clone();
         let mut state = state_mut.lock().unwrap();
+        let sound_ref = self.sound.as_ref().ok_or("sound not inited")?;
+        let params = get_draw_params();
+
         match *state {
             GameState::PreGame => {
-                self.draw_start(frame, timestep, 0)?;
+                self.draw_scenary(frame, timestep, 0)?;
             }
-
             GameState::Game(round_counter) => {
-                //update position visulization create shots
-                self.handle_mask()?;
-
-                //hit test
-                self.hit_test(timestep)?;
-
-                //update vertex/index buffer particle_data
-                self.update_dynamic_buffers(display)?;
+                if round_counter.round > 0
+                    || sound_ref.get_duration_ms("go".to_string())?
+                        < round_counter.time_info.runtime
+                {
+                    //update position visulization create shots
+                    self.handle_mask()?;
+                    //hit test
+                    self.hit_test(timestep)?;
+                    //update vertex/index buffer particle_data
+                    self.update_dynamic_buffers(display)?;
+                }
 
                 //draw everything
-                self.draw_entities(frame, timestep, round_counter.round as usize)?;
+                self.draw_scenary(frame, timestep, round_counter.round as usize)?;
+                self.draw_skulls(frame, &params)?;
+                self.draw_particles(frame, &params)?;
 
                 //check for win condition
                 if let Some(moon_d) = self.moon_data.as_mut() {
                     if moon_d.moon.life.current_value == 0_f32 {
-                        let sound_ref = self.sound.as_mut().ok_or("sound not intitialized")?;
-                        sound_ref.stop_bgm();
-                        if round_counter.round + 1 >= self.settings.number_of_rounds {
-                            *state = GameState::PostGame;
-                            sound_ref.play("finish", SoundType::Sfx)?;
+                        let sound_ref_mut = self.sound.as_mut().ok_or("sound not intitialized")?;
+                        sound_ref_mut.stop_bgm();
+                        if round_counter.round + 1 >= round_counter.max_round {
+                            *state = GameState::PostGame(RoundCounter::new(
+                                round_counter.round + 1,
+                                &self.settings,
+                            ));
+                            sound_ref_mut.play("finish", SoundType::Sfx)?;
                         } else {
                             *state = GameState::Intermission(round_counter);
                             moon_d.moon.heal(moon_d.moon.max_life);
-                            sound_ref.play("intermission", SoundType::Sfx)?;
+                            sound_ref_mut.play("intermission", SoundType::Sfx)?;
                         };
-
                         self.kill_all_skulls()?;
                     }
                 }
@@ -533,13 +474,17 @@ impl GameTrait for SkullGame {
                         particle.update();
                     }
                 }
-                self.draw_start(frame, timestep, (round_counter.round + 1) as usize)?;
-                let params = Self::get_draw_params();
+                self.draw_scenary(frame, timestep, (round_counter.round + 1) as usize)?;
                 self.draw_particles(frame, &params)?;
             }
-
-            GameState::PostGame => {
-                self.draw_victory(frame)?;
+            GameState::PostGame(round_counter) => {
+                if sound_ref.get_duration_ms("finish".to_string())?
+                    < round_counter.time_info.runtime
+                {
+                    self.draw_victory(frame)?;
+                } else {
+                    self.draw_scenary(frame, timestep, (round_counter.round + 1) as usize)?;
+                }
             }
         };
         Ok(())
@@ -561,10 +506,7 @@ impl GameTrait for SkullGame {
             match &*state {
                 GameState::PreGame => {
                     if val.to_lowercase() == self.settings.key_settings.start_key {
-                        *state = GameState::Game(RoundCounter {
-                            round: 0,
-                            max_round: self.settings.number_of_rounds,
-                        });
+                        *state = GameState::Game(RoundCounter::new(0, &self.settings));
                         if let Err(err) = play_start() {
                             println!("Error in playing sound {}. Continuing", err)
                         }
@@ -572,10 +514,10 @@ impl GameTrait for SkullGame {
                 }
                 GameState::Intermission(round_counter) => {
                     if val.to_lowercase() == self.settings.key_settings.start_key {
-                        *state = GameState::Game(RoundCounter {
-                            round: round_counter.round + 1,
-                            max_round: self.settings.number_of_rounds,
-                        });
+                        *state = GameState::Game(RoundCounter::new(
+                            round_counter.round + 1,
+                            &self.settings,
+                        ));
                     }
                 }
                 _ => {} //can;t start game in current state
@@ -585,14 +527,11 @@ impl GameTrait for SkullGame {
         match event.as_ref() {
             Key::Character(val) if val == self.settings.key_settings.normal_mode_key => {
                 println!("set difficultiy normal");
-                self.difficultiy = DiffcultySelector::default();
+                self.difficultiy = self.settings.difficultiy_settings.normal;
             }
             Key::Character(val) if val == self.settings.key_settings.easy_mode_key => {
                 println!("set difficultiy easy");
-                self.difficultiy = DiffcultySelector {
-                    player_damage: 5,
-                    escape_penalty: 0,
-                };
+                self.difficultiy = self.settings.difficultiy_settings.easy;
             }
             _ => {}
         };

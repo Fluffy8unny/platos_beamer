@@ -1,6 +1,7 @@
 use ::glium::{IndexBuffer, VertexBuffer};
 use glium::implement_vertex;
 
+use crate::game::skull_game::config::MoonSettings;
 use crate::game::util::Interpolator;
 use crate::{
     display::display_window::DisplayType, game::skull_game::util::generate_index_for_quad,
@@ -19,6 +20,7 @@ pub struct Moon {
     pub current_position: (f32, f32),
     pub scale: (f32, f32),
     pub color_overlay: Vec<[f32; 3]>,
+    pub corona_color: Vec<[f32; 3]>,
     pub life: Interpolator<f32>,
     pub max_life: u32,
     pub state: MoonState,
@@ -92,6 +94,7 @@ impl Moon {
             max_position: settings.max_position,
             current_position: settings.position,
             color_overlay: settings.color_overlay,
+            corona_color: settings.corona_color,
             scale: settings.scale,
         }
     }
@@ -131,10 +134,29 @@ impl Moon {
     }
 }
 
+pub fn create_moon_data(
+    display: &DisplayType,
+    settings: &MoonSettings,
+) -> Result<MoonData, Box<dyn std::error::Error>> {
+    let moon = Moon::new(settings.clone());
+    let (moon_vb, moon_idxb) = create_moon_vertex_buffer(&moon, 1_f32, display)?;
+    let (corona_vb, corona_idxb) = create_moon_vertex_buffer(&moon, 1.25_f32, display)?;
+    Ok(MoonData {
+        moon_vb,
+        moon_idxb,
+        corona_vb,
+        corona_idxb,
+        moon,
+    })
+}
+
 pub fn update_moon_data(
-    moon_data: &MoonData,
+    moon_data: &mut MoonData,
     display: &DisplayType,
 ) -> Result<MoonData, Box<dyn std::error::Error>> {
+    moon_data.moon.update_position();
+    moon_data.moon.life.update();
+
     let (moon_vb, moon_idxb) = create_moon_vertex_buffer(&moon_data.moon, 1_f32, display)?;
     let (corona_vb, corona_idxb) = create_moon_vertex_buffer(&moon_data.moon, 1.25_f32, display)?;
 
