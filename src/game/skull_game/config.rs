@@ -23,6 +23,7 @@ pub struct MoonSettings {
     pub position: (f32, f32),
     pub max_position: (f32, f32),
     pub scale: (f32, f32),
+    pub color_overlay: Vec<[f32; 3]>,
 }
 
 #[derive(Deserialize, Clone)]

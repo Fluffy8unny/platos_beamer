@@ -9,14 +9,6 @@ pub struct NaiveSettings {
     threshold_per_channel: f64,
 }
 
-impl NaiveSettings {
-    pub fn default() -> NaiveSettings {
-        NaiveSettings {
-            threshold_per_channel: 120_f64,
-        }
-    }
-}
-
 pub struct NaiveSubtractor {
     pub background_approximation: Mat,
     pub settings: NaiveSettings,
@@ -37,15 +29,6 @@ fn naive_background_removal(img: Mat, ref_img: Mat, threshold: f64) -> Result<Ma
     let acc_res = acc?;
 
     greater_than_mat_f64(&acc_res, threshold)
-}
-
-impl NaiveSubtractor {
-    pub fn new(settings: NaiveSettings) -> NaiveSubtractor {
-        NaiveSubtractor {
-            background_approximation: (Mat::default()),
-            settings,
-        }
-    }
 }
 
 impl BackgroundSubtractor for NaiveSubtractor {

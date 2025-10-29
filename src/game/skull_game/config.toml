@@ -98,7 +98,11 @@ number_of_escape_sounds = 4
     position=[0.0,0.35]
     max_position= [0.0, 0.7]
     scale=[0.1,0.17]
-
+    color_overlay = [
+        [1.0, 0.5, 0.0],
+        [1.0, 0.0, 0.0],
+        [1.0, 1.0, 1.0],
+    ]
 
 [texture_settings]
 texture_arrays = [

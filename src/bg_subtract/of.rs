@@ -25,21 +25,6 @@ pub enum OfOutputType {
     YDirection,
 }
 
-impl OfSettings {
-    pub fn default() -> OfSettings {
-        OfSettings {
-            mode: OfOutputType::YDirection,
-            scales: 3_i32,
-            win_size: 15_i32,
-            iterations: 3_i32,
-            poly_n: 5_i32,
-            poly_sigma: 1.2_f64,
-            flags: 0_i32,
-            threshold: 20.0_f64,
-        }
-    }
-}
-
 pub struct OfSubtractor {
     settings: OfSettings,
     prev_img: Option<Mat>,

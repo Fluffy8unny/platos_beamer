@@ -17,18 +17,6 @@ pub struct MogSettings {
     learning_rate: f64,
 }
 
-impl MogSettings {
-    pub fn default() -> MogSettings {
-        MogSettings {
-            history: 250,
-            mixtures: 5,
-            background_ratio: 0.65,
-            noise_sigma: 5.2,
-            learning_rate: 0.05,
-        }
-    }
-}
-
 pub struct MogSubtractor {
     subtractor: Ptr<BackgroundSubtractorMOG>,
     settings: MogSettings,

@@ -90,7 +90,7 @@ fn get_distance_to_target(particle: &Particle) -> (f32, f32) {
     )
 }
 fn check_in_ellipsis(particle: &Particle) -> bool {
-    let dx = (particle.target.center.0 - particle.center.0);
+    let dx = particle.target.center.0 - particle.center.0;
     let dy = particle.target.center.1 - particle.center.1;
 
     (dx * dx) / (particle.target.size.0 * particle.target.size.0)

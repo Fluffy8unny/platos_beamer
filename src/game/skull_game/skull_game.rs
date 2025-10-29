@@ -7,7 +7,7 @@ use crate::game::skull_game::config::{GameSettings, ParticleSetting};
 use crate::game::skull_game::live_view::LiveViewData;
 use crate::game::skull_game::moon::{Moon, MoonData, create_moon_vertex_buffer, update_moon_data};
 use crate::game::skull_game::particle::{
-    self, Particle, ParticleData, Target, generate_random_particles_around_point,
+    Particle, ParticleData, Target, generate_random_particles_around_point,
     generate_random_repulsed_particles_around_point, update_particle_state,
 };
 use crate::game::skull_game::position_visualization::spawn_based_on_mask;
@@ -246,6 +246,7 @@ impl SkullGame {
         frame: &mut glium::Frame,
         params: &glium::DrawParameters,
         timestep: &TimeStep,
+        color_selector: usize,
     ) -> Result<(), Box<dyn std::error::Error>> {
         match &mut self.moon_data {
             Some(moon) => {
@@ -257,12 +258,15 @@ impl SkullGame {
                     params,
                 )?;
                 frame.draw(
-                &moon.moon_vb,
-                &moon.moon_idxb,
-                &self.programs["moon_program"],
-                &uniform! {moon_texture: &self.textures["moon_texture"],moon_mask: &self.textures["moon"],time: moon.moon.get_life_fraction()},
-                params,
-            )?;
+                    &moon.moon_vb,
+                    &moon.moon_idxb,
+                    &self.programs["moon_program"],
+                    &uniform! {moon_texture: &self.textures["moon_texture"],
+                    moon_mask: &self.textures["moon"],
+                    color_overlay: moon.moon.color_overlay[color_selector],
+                    time: moon.moon.get_life_fraction()},
+                    params,
+                )?;
                 Ok(())
             }
             None => Err(Self::get_boxed_opencv_error("Moon", 3)),
@@ -273,10 +277,11 @@ impl SkullGame {
         &mut self,
         frame: &mut glium::Frame,
         timestep: &TimeStep,
+        round_counter: usize,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let params = Self::get_draw_params();
         self.draw_live(frame, &params, timestep)?;
-        self.draw_moon(frame, &params, timestep)
+        self.draw_moon(frame, &params, timestep, round_counter)
     }
 
     fn draw_victory(&mut self, frame: &mut glium::Frame) -> Result<(), Box<dyn std::error::Error>> {
@@ -313,10 +318,11 @@ impl SkullGame {
         &mut self,
         frame: &mut glium::Frame,
         timestep: &TimeStep,
+        round_counter: usize,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let params = Self::get_draw_params();
         self.draw_live(frame, &params, timestep)?;
-        self.draw_moon(frame, &params, timestep)?;
+        self.draw_moon(frame, &params, timestep, round_counter)?;
 
         match &self.skull_data {
             Some(skulls) => Ok(frame.draw(
@@ -349,6 +355,19 @@ impl SkullGame {
         self.moon_data.as_mut().unwrap().moon.update_position();
         self.moon_data.as_mut().unwrap().moon.life.update();
         self.moon_data = Some(update_moon_data(self.moon_data.as_ref().unwrap(), display)?);
+        Ok(())
+    }
+
+    fn handle_mask(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(mask) = &self.mask {
+            if let Ok(mut motion_particles) =
+                spawn_based_on_mask(mask, self.settings.particle_settings.visualization.number)
+            {
+                if let Some(particle_data) = &mut self.particle_data {
+                    particle_data.particles.append(&mut motion_particles);
+                }
+            }
+        }
         Ok(())
     }
 }
@@ -445,25 +464,16 @@ impl GameTrait for SkullGame {
         display: &DisplayType,
         timestep: &TimeStep,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        //particles for pos visialization
-        if let Some(mask) = &self.mask {
-            if let Ok(mut motion_particles) =
-                spawn_based_on_mask(mask, self.settings.particle_settings.visualization.number)
-            {
-                if let Some(particle_data) = &mut self.particle_data {
-                    particle_data.particles.append(&mut motion_particles);
-                }
-            }
-        }
-
         let state_mut = self.game_state.clone();
         let mut state = state_mut.lock().unwrap();
         match *state {
             GameState::PreGame => {
-                self.draw_start(frame, timestep)?;
+                self.draw_start(frame, timestep, 0)?;
             }
 
             GameState::Game(round_counter) => {
+                self.handle_mask()?;
+
                 //hit test
                 self.hit_test(timestep)?;
 
@@ -471,14 +481,14 @@ impl GameTrait for SkullGame {
                 self.update_dynamic_buffers(display)?;
 
                 //draw everything
-                self.draw_entities(frame, timestep)?;
+                self.draw_entities(frame, timestep, round_counter.round as usize)?;
 
                 //check for win condition
                 if let Some(moon_d) = self.moon_data.as_mut() {
                     if moon_d.moon.life.current_value == 0_f32 {
                         let sound_ref = self.sound.as_mut().ok_or("sound not intitialized")?;
                         sound_ref.stop_bgm();
-                        if round_counter.round + 1 >= self.settings.number_of_rounds {
+                        if round_counter.round + 1 >= round_counter.max_round {
                             *state = GameState::PostGame;
                             sound_ref.play("finish", SoundType::Sfx)?;
                         } else {
@@ -511,7 +521,7 @@ impl GameTrait for SkullGame {
                 }
             }
 
-            GameState::Intermission(_round_counter) => {
+            GameState::Intermission(round_counter) => {
                 //just display moon healing press start key to continue
                 self.update_dynamic_buffers(display)?;
                 if let Some(particles) = &mut self.particle_data {
@@ -519,7 +529,7 @@ impl GameTrait for SkullGame {
                         particle.update();
                     }
                 }
-                self.draw_start(frame, timestep)?;
+                self.draw_start(frame, timestep, (round_counter.round + 1) as usize)?;
                 let params = Self::get_draw_params();
                 self.draw_particles(frame, &params)?;
             }

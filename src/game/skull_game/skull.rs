@@ -7,7 +7,7 @@ use crate::{display::timestep::TimeStep, game::skull_game::config::SkullSettings
 
 use ::glium::{IndexBuffer, VertexBuffer};
 use glium::implement_vertex;
-use noise::{NoiseFn, Perlin, Seedable};
+use noise::{NoiseFn, Perlin};
 
 #[derive(Debug, Clone, Copy)]
 pub enum SkullState {

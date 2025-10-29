@@ -1,7 +1,7 @@
 use crate::config::SoundConfig;
 use rodio::{
     Decoder, OutputStream, OutputStreamBuilder, Sink,
-    source::{Buffered, Repeat, Source, Stoppable},
+    source::{Buffered, Source},
 };
 use std::collections::HashMap;
 use std::fs::File;
@@ -16,7 +16,6 @@ pub enum SoundType {
 
 pub struct AudioHandler {
     stream_handle: OutputStream,
-    _sink: Sink, //needs to have the same lifetime as stream_handle
     sounds: HashMap<String, SoundSourceResult>,
     config: SoundConfig,
     background_music: Option<Sink>,
@@ -38,10 +37,8 @@ impl AudioHandler {
             .into_iter()
             .map(|(name, path)| -> (String, SoundSourceResult) { (name, load_sound_data(&path)) })
             .collect();
-        let sink = rodio::Sink::connect_new(stream_handle.mixer());
         Ok(AudioHandler {
             stream_handle,
-            _sink: sink,
             sounds,
             background_music: None,
             config,
@@ -82,7 +79,6 @@ impl AudioHandler {
         };
         amp * self.config.master_volume
     }
-
     pub fn play(
         &self,
         name: &str,
@@ -98,10 +94,5 @@ impl AudioHandler {
             }
             Err(_err) => Err(format!("Sound not found {:?}", name).into()),
         }
-    }
-
-    pub fn add_sound(&mut self, name: String, path: String) {
-        let sound_source = load_sound_data(&path);
-        self.sounds.insert(name, sound_source);
     }
 }

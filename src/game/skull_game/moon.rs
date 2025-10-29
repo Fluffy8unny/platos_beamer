@@ -1,8 +1,6 @@
 use ::glium::{IndexBuffer, VertexBuffer};
 use glium::implement_vertex;
 
-use crate::display::timestep::TimeStep;
-use crate::game::skull_game::{moon, position_visualization};
 use crate::game::util::Interpolator;
 use crate::{
     display::display_window::DisplayType, game::skull_game::util::generate_index_for_quad,
@@ -14,12 +12,13 @@ pub enum MoonState {
     Dead,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct Moon {
     pub position: (f32, f32),
     pub max_position: (f32, f32),
     pub current_position: (f32, f32),
     pub scale: (f32, f32),
+    pub color_overlay: Vec<[f32; 3]>,
     pub life: Interpolator<f32>,
     pub max_life: u32,
     pub state: MoonState,
@@ -92,6 +91,7 @@ impl Moon {
             position: settings.position,
             max_position: settings.max_position,
             current_position: settings.position,
+            color_overlay: settings.color_overlay,
             scale: settings.scale,
         }
     }
@@ -143,7 +143,7 @@ pub fn update_moon_data(
         moon_idxb,
         corona_vb,
         corona_idxb,
-        moon: moon_data.moon,
+        moon: moon_data.moon.clone(),
     })
 }
 

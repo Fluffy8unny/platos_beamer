@@ -5,7 +5,7 @@ mod of;
 mod test;
 
 pub use config::BGSubtracSettings;
-pub use mog::{MogSettings, MogSubtractor};
-pub use naive::{NaiveSettings, NaiveSubtractor};
-pub use of::{OfSettings, OfSubtractor};
-pub use test::{TestSettings, TestSubtractor};
+pub use mog::MogSubtractor;
+pub use naive::NaiveSubtractor;
+pub use of::OfSubtractor;
+pub use test::TestSubtractor;
