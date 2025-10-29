@@ -1,9 +1,8 @@
+use crate::PlatoConfig;
 use crate::config::load_config;
 use crate::display::{display_window::DisplayType, timestep::TimeStep};
-
-use crate::PlatoConfig;
 use crate::game::load_shaders;
-use crate::game::skull_game::config::{DifficultySelector, GameSettings};
+use crate::game::skull_game::config::{DifficultySelector, GameSettings, valdiate_config};
 use crate::game::skull_game::live_view::LiveViewData;
 use crate::game::skull_game::moon::{MoonData, create_moon_data, update_moon_data};
 use crate::game::skull_game::particle::{
@@ -79,7 +78,9 @@ pub struct SkullGame {
 impl SkullGame {
     pub fn new(config_path: &str) -> Result<SkullGame, Box<dyn std::error::Error>> {
         let settings: GameSettings = load_config(config_path)?;
+        valdiate_config(&settings)?;
         let difficulty = settings.difficultiy_settings.normal;
+
         Ok(SkullGame {
             skull_data: None,
             particle_data: None,
@@ -207,6 +208,7 @@ impl SkullGame {
                     corona_color: moon.moon.corona_color[color_selector]},
                     params,
                 )?;
+
                 frame.draw(
                     &moon.moon_vb,
                     &moon.moon_idxb,
@@ -301,13 +303,11 @@ impl SkullGame {
     }
 
     fn handle_mask(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        if let Some(mask) = &self.mask {
+        if let (Some(mask), Some(particle_data)) = (&self.mask, &mut self.particle_data) {
             if let Ok(mut motion_particles) =
                 spawn_based_on_mask(mask, self.settings.particle_settings.visualization.number)
             {
-                if let Some(particle_data) = &mut self.particle_data {
-                    particle_data.particles.append(&mut motion_particles);
-                }
+                particle_data.particles.append(&mut motion_particles);
             }
         }
         Ok(())
@@ -466,6 +466,7 @@ impl GameTrait for SkullGame {
                     }
                 }
             }
+
             GameState::Intermission(round_counter) => {
                 //just display moon healing press start key to continue
                 self.update_dynamic_buffers(display)?;
@@ -526,11 +527,11 @@ impl GameTrait for SkullGame {
 
         match event.as_ref() {
             Key::Character(val) if val == self.settings.key_settings.normal_mode_key => {
-                println!("set difficultiy normal");
+                println!("set difficulty normal");
                 self.difficultiy = self.settings.difficultiy_settings.normal;
             }
             Key::Character(val) if val == self.settings.key_settings.easy_mode_key => {
-                println!("set difficultiy easy");
+                println!("set difficulty easy");
                 self.difficultiy = self.settings.difficultiy_settings.easy;
             }
             _ => {}

@@ -83,3 +83,28 @@ pub struct GameSettings {
     pub number_of_kill_sounds: u32,
     pub number_of_escape_sounds: u32,
 }
+
+pub fn valdiate_config(settings: &GameSettings) -> Result<(), Box<dyn std::error::Error>> {
+    let number_of_rounds = (settings.number_of_rounds + 2) as usize;
+    let number_of_overlays = settings.moon_settings.color_overlay.len();
+    let number_of_coorona_colors = settings.moon_settings.corona_color.len();
+
+    if number_of_rounds != number_of_overlays {
+        return Err(format!(
+            "number of color overalys{} != number of rounds {}",
+            number_of_overlays, number_of_rounds
+        )
+        .into());
+    }
+
+    if number_of_rounds != number_of_coorona_colors {
+        return Err(format!(
+            "number of corona colors{} != number of rounds {}",
+            number_of_coorona_colors, number_of_rounds
+        )
+        .into());
+    }
+
+    //todo check if all sounds are there
+    Ok(())
+}
