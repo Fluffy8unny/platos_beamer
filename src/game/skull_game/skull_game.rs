@@ -370,6 +370,29 @@ impl SkullGame {
         }
         Ok(())
     }
+
+    fn kill_all_skulls(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(moon_d) = self.moon_data.as_mut() {
+            if let Some(skull_d) = self.skull_data.as_mut() {
+                for skull in skull_d.skulls.iter_mut() {
+                    if let Some(particles) = &mut self.particle_data {
+                        particles
+                            .particles
+                            .append(&mut Self::spawn_particles_for_skull(
+                                skull.center,
+                                skull.scale,
+                                moon_d.moon.current_position,
+                                (1.2_f32 * moon_d.moon.scale.0, 1.2_f32 * moon_d.moon.scale.1),
+                                &self.settings.particle_settings.killed,
+                            ));
+                    }
+                    skull.state = skull::SkullState::Killed;
+                }
+                skull_d.skulls.clear();
+            }
+        };
+        Ok(())
+    }
 }
 
 impl GameTrait for SkullGame {
@@ -472,6 +495,7 @@ impl GameTrait for SkullGame {
             }
 
             GameState::Game(round_counter) => {
+                //update position visulization create shots
                 self.handle_mask()?;
 
                 //hit test
@@ -488,39 +512,19 @@ impl GameTrait for SkullGame {
                     if moon_d.moon.life.current_value == 0_f32 {
                         let sound_ref = self.sound.as_mut().ok_or("sound not intitialized")?;
                         sound_ref.stop_bgm();
-                        if round_counter.round + 1 >= round_counter.max_round {
+                        if round_counter.round + 1 >= self.settings.number_of_rounds {
                             *state = GameState::PostGame;
                             sound_ref.play("finish", SoundType::Sfx)?;
                         } else {
                             *state = GameState::Intermission(round_counter);
                             moon_d.moon.heal(moon_d.moon.max_life);
-                            if let Some(skull_d) = self.skull_data.as_mut() {
-                                for skull in skull_d.skulls.iter_mut() {
-                                    if let Some(particles) = &mut self.particle_data {
-                                        particles.particles.append(
-                                            &mut Self::spawn_particles_for_skull(
-                                                skull.center,
-                                                skull.scale,
-                                                moon_d.moon.current_position,
-                                                (
-                                                    1.2_f32 * moon_d.moon.scale.0,
-                                                    1.2_f32 * moon_d.moon.scale.1,
-                                                ),
-                                                &self.settings.particle_settings.killed,
-                                            ),
-                                        );
-                                    }
-
-                                    skull.state = skull::SkullState::Killed;
-                                }
-                                skull_d.skulls.clear();
-                            }
                             sound_ref.play("intermission", SoundType::Sfx)?;
-                        }
+                        };
+
+                        self.kill_all_skulls()?;
                     }
                 }
             }
-
             GameState::Intermission(round_counter) => {
                 //just display moon healing press start key to continue
                 self.update_dynamic_buffers(display)?;
