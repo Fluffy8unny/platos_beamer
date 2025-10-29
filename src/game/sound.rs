@@ -14,7 +14,7 @@ struct SoundData {
     length: Duration,
 }
 
-pub type SoundSourceResult = Result<SoundData, Box<dyn std::error::Error>>;
+type SoundSourceResult = Result<SoundData, Box<dyn std::error::Error>>;
 pub enum SoundType {
     Sfx,
     Music,
@@ -31,9 +31,7 @@ fn load_sound_data(path: &str) -> SoundSourceResult {
     let file = File::open(path)?;
     let buff_reader = BufReader::new(file);
     let source = Decoder::new(buff_reader)?;
-    let length = source
-        .total_duration()
-        .ok_or(format!("could not query length for source:{}", path))?;
+    let length = source.total_duration().unwrap_or_default();
     Ok(SoundData {
         source: source.buffered(),
         length,
@@ -66,11 +64,11 @@ impl AudioHandler {
 
     pub fn start_bgm(&mut self, name: String) -> Result<(), Box<dyn std::error::Error>> {
         self.stop_bgm();
+
         let repeating_source = match self
             .sounds
             .get(&name)
             .ok_or(format!("sound {:?} not found", name))?
-            .as_ref()
         {
             Ok(res) => res
                 .source
@@ -78,7 +76,7 @@ impl AudioHandler {
                 .repeat_infinite()
                 .stoppable()
                 .amplify_normalized(self.get_volume(SoundType::Music)),
-            Err(_err) => return Err(format!("sound not found {:?}", name).into()),
+            Err(err) => return Err(format!("error using sound {:?} {}", name, err).into()),
         };
         let sink = rodio::Sink::connect_new(self.stream_handle.mixer());
         sink.append(repeating_source);

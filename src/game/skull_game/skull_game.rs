@@ -29,12 +29,13 @@ use glium::winit::keyboard::Key;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 #[derive(Debug, Clone, Copy)]
 struct RoundCounter {
     round: u32,
     max_round: u32,
-    time_info: TimeStep,
+    time_info: Instant,
 }
 
 impl RoundCounter {
@@ -42,7 +43,7 @@ impl RoundCounter {
         RoundCounter {
             round,
             max_round: settings.number_of_rounds,
-            time_info: TimeStep::new(),
+            time_info: Instant::now(),
         }
     }
 }
@@ -431,7 +432,7 @@ impl GameTrait for SkullGame {
             GameState::Game(round_counter) => {
                 if round_counter.round > 0
                     || sound_ref.get_duration_ms("go".to_string())?
-                        < round_counter.time_info.runtime
+                        < round_counter.time_info.elapsed().as_millis() as f32
                 {
                     //update position visulization create shots
                     self.handle_mask()?;
@@ -450,8 +451,8 @@ impl GameTrait for SkullGame {
                 if let Some(moon_d) = self.moon_data.as_mut() {
                     if moon_d.moon.life.current_value == 0_f32 {
                         let sound_ref_mut = self.sound.as_mut().ok_or("sound not intitialized")?;
-                        sound_ref_mut.stop_bgm();
                         if round_counter.round + 1 >= round_counter.max_round {
+                            sound_ref_mut.stop_bgm();
                             *state = GameState::PostGame(RoundCounter::new(
                                 round_counter.round + 1,
                                 &self.settings,
@@ -480,11 +481,11 @@ impl GameTrait for SkullGame {
             }
             GameState::PostGame(round_counter) => {
                 if sound_ref.get_duration_ms("finish".to_string())?
-                    < round_counter.time_info.runtime
+                    < round_counter.time_info.elapsed().as_millis() as f32
                 {
                     self.draw_victory(frame)?;
                 } else {
-                    self.draw_scenary(frame, timestep, (round_counter.round + 1) as usize)?;
+                    self.draw_scenary(frame, timestep, (round_counter.round) as usize)?;
                 }
             }
         };

@@ -85,7 +85,7 @@ pub struct GameSettings {
 }
 
 pub fn valdiate_config(settings: &GameSettings) -> Result<(), Box<dyn std::error::Error>> {
-    let number_of_rounds = (settings.number_of_rounds + 2) as usize;
+    let number_of_rounds = (settings.number_of_rounds + 1) as usize;
     let number_of_overlays = settings.moon_settings.color_overlay.len();
     let number_of_coorona_colors = settings.moon_settings.corona_color.len();
 

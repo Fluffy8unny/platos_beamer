@@ -44,7 +44,7 @@ fragment="""
         float v = 1.0-smoothstep(0.8,1.0,mix);
         float d = 1.0-smoothstep(0.6,0.9,mix);
         
-        vec3 output_color = vec3(v,d,0.0)*corona_color;
+        vec3 output_color = vec3(v,d,1.0)*corona_color;
         frag_color =  vec4(output_color.xyz,v);
      }
       """
