@@ -31,7 +31,13 @@ fn load_sound_data(path: &str) -> SoundSourceResult {
     let file = File::open(path)?;
     let buff_reader = BufReader::new(file);
     let source = Decoder::new(buff_reader)?;
-    let length = source.total_duration().unwrap_or_default();
+    let length = match source.total_duration() {
+        Some(duration) => duration,
+        None => {
+            eprintln!("Warning: Could not query length of {:?}. Using 0.", path);
+            Duration::default()
+        }
+    };
     Ok(SoundData {
         source: source.buffered(),
         length,

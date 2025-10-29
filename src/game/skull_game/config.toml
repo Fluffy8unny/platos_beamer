@@ -59,10 +59,6 @@ sound_settings = [
         "assets/sound/intermission.mp3",
     ],
     [
-        "intermission",
-        "assets/sound/intermission.mp3",
-    ],
-    [
         "go",
         "assets/sound/go.wav",
     ],
