@@ -80,16 +80,12 @@ The **Skull Game** is the main showcase example for the Platos Beamer engine. It
 
 ### Gameplay
 
-- **Objective:** Skulls (targets) appear projected onto the silhouettes of participants. The goal is to "destroy" these skulls by moving and overlapping them with your silhouette.
-- **Rounds & States:** The game is divided into rounds. Each round, new skulls spawn and players try to destroy them. There are intermission periods and post-game victory screens.
-- **Difficulty:** Skulls can escape if not destroyed in time, and their movement and spawning can be adjusted for different difficulty settings.
-- **Feedback:** Sound effects and visual particle effects provide feedback for interactions (destroyed or escaped skulls).
+Skulls (targets) appear projected onto the silhouettes of participants. The goal is to "destroy" these skulls. This can be acomplished by a vertical movement, that spawns bulletts, that fly upwards.
 
 ### How To Try
 
 - Select "Skull Game" as the game mode in your configuration.
 - Run the engine and let participants interact with the projected skulls!
-- Ideal for party settings and interactive installations.
 
 ---
 
