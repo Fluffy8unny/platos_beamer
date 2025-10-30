@@ -244,7 +244,7 @@ impl SkullGame {
                 &v_data.index_buffer,
                 &self.programs["victory_program"],
                 &uniform! {tex:&self.textures["victory_texture"]},
-                &glium::draw_parameters::DrawParameters::default(),
+                &get_draw_params(),
             )?),
             None => Err(get_boxed_opencv_error("Victory", 3)),
         }
@@ -485,12 +485,12 @@ impl GameTrait for SkullGame {
                 self.draw_particles(frame, &params)?;
             }
             GameState::PostGame(round_counter) => {
-                if sound_ref.get_duration_ms("finish".to_string())?
-                    < round_counter.time_info.elapsed().as_millis() as f32
-                {
+                let intro_over = sound_ref.get_duration_ms("finish".to_string())?
+                    < round_counter.time_info.elapsed().as_millis() as f32;
+                self.draw_scenary(frame, time_step, (round_counter.round) as usize)?;
+
+                if intro_over {
                     self.draw_victory(frame)?;
-                } else {
-                    self.draw_scenary(frame, time_step, (round_counter.round) as usize)?;
                 }
             }
         };
