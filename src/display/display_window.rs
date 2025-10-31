@@ -1,7 +1,7 @@
 use opencv::prelude::*;
 
 use crate::PlatoConfig;
-use crate::display::minimap::Minimap;
+use crate::display::minimap::{Minimap, MinimapState, rotate_state};
 use crate::display::timestep::TimeStep;
 use crate::threads::try_sending;
 use crate::types::{GameTrait, thread_types::*};
@@ -70,7 +70,12 @@ impl PlatoApp {
     }
 
     fn update(&mut self, image: Mat, mask: Mat) -> Result<(), Box<dyn std::error::Error>> {
-        self.minimap.update_texture(&image, &mask, &self.display)?;
+        self.minimap.update_texture(
+            &image,
+            &mask,
+            &self.display,
+            &self.config.minimap_config.show,
+        )?;
         self.game.update(&image, &mask, &self.display)?;
         Ok(())
     }
@@ -80,7 +85,7 @@ impl PlatoApp {
         let mut frame = self.display.draw();
         clear_frame(&mut frame);
         self.game.draw(&mut frame, &self.display, &self.timestep)?;
-        if self.config.minimap_config.show {
+        if !matches!(self.config.minimap_config.show, MinimapState::Hide) {
             self.minimap.draw(&mut frame)?;
         }
 
@@ -140,7 +145,8 @@ impl ApplicationHandler for PlatoApp {
                 Key::Character(val)
                     if val.to_lowercase() == self.config.key_config.toggle_minimap_key =>
                 {
-                    self.config.minimap_config.show = !self.config.minimap_config.show;
+                    self.config.minimap_config.show =
+                        rotate_state(&self.config.minimap_config.show);
                 }
                 _ => (),
             },

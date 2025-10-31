@@ -1,5 +1,5 @@
 pub mod display_window;
-mod minimap;
+pub mod minimap;
 pub mod primitves;
 pub mod timestep;
 

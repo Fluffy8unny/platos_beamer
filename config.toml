@@ -10,7 +10,7 @@ subtractor_type = "OpticalFlow"
 settings_path = "src/bg_subtract/config.toml"
 
 [minimap_config]
-show = true
+show = "Hide"
 position = [0.4,0.4]
 dims     = [0.5,0.5]
 

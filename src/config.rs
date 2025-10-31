@@ -1,3 +1,4 @@
+use crate::display::minimap::MinimapState;
 use crate::types::{GameType, SubtractorType};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
@@ -16,7 +17,7 @@ pub struct BgSubConfig {
 
 #[derive(Deserialize, Clone)]
 pub struct MinimapConfig {
-    pub show: bool,
+    pub show: MinimapState,
     pub position: (f32, f32),
     pub dims: (f32, f32),
 }

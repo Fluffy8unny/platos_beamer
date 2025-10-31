@@ -6,13 +6,16 @@ use crate::{
         display_window::DisplayType,
         primitves::{QUAD_INDICES, Vertex, get_quad_buffer},
     },
-    game::util::{load_shaders, mat_1c_to_texture_r},
+    game::util::{image_to_gray_texture_r, load_shaders},
 };
 
 use glium::Surface;
 use glium::uniform;
+
 use opencv::core::CV_8UC1;
 use opencv::prelude::*;
+
+use serde::Deserialize;
 
 pub struct BufferCollection {
     pub vertex_buffer: glium::VertexBuffer<Vertex>,
@@ -25,9 +28,24 @@ pub struct Minimap {
     program: glium::Program,
 }
 
+#[derive(Deserialize, Clone)]
+pub enum MinimapState {
+    Hide,
+    ShowMask,
+    ShowImage,
+}
+
+pub fn rotate_state(state: &MinimapState) -> MinimapState {
+    match state {
+        MinimapState::Hide => MinimapState::ShowImage,
+        MinimapState::ShowImage => MinimapState::ShowMask,
+        MinimapState::ShowMask => MinimapState::Hide,
+    }
+}
+
 impl Minimap {
     pub fn new(display: &DisplayType, config: &PlatoConfig) -> Result<Minimap, Box<dyn Error>> {
-        let default_texture = mat_1c_to_texture_r(display, &get_empty_minimap())?;
+        let default_texture = image_to_gray_texture_r(display, &get_empty_minimap())?;
         Ok(Minimap {
             buffers: get_buffers(
                 display,
@@ -55,11 +73,17 @@ impl Minimap {
 
     pub fn update_texture(
         &mut self,
-        _image: &Mat, //not implemented yet
+        image: &Mat, //not implemented yet
         mask: &Mat,
         display: &DisplayType,
+        minimap_mode: &MinimapState,
     ) -> Result<(), Box<dyn Error>> {
-        let texture = mat_1c_to_texture_r(display, mask)?;
+        let data = match minimap_mode {
+            MinimapState::Hide => &get_empty_minimap(),
+            MinimapState::ShowMask => mask,
+            MinimapState::ShowImage => image,
+        };
+        let texture = image_to_gray_texture_r(display, data)?;
         self.texture = texture;
         Ok(())
     }

@@ -25,6 +25,7 @@ It's named after the philosophical concept Plato came up with, called [Plato's C
 - [Configuration](#configuration)
 - [System Setup](#system-setup)
 - [Engine Architecture & Custom Games](#engine-architecture--custom-games)
+- [Implementing a Custom Subtractor](#implementing-a-custom-subtractor)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -152,12 +153,6 @@ cargo run --release
     - It will capture silhouettes from the camera feed.
     - Project game elements onto detected silhouettes.
     - Participants interact with the projections.
-    - Sound effects provide feedback.
-
-5. **Keyboard controls**:
-    - Use the configured start key to begin the game.
-    - Difficulty can be toggled (see configuration).
-    - Intermissions and rounds are managed automatically.
 
 ---
 
@@ -219,6 +214,17 @@ To add your own game mode:
 5. **Configure your game** in the TOML configuration files.
 
 You can use both the raw images and silhouette masks to drive your game logic, making it easy to create new interactive experiences that leverage physical movement and computer vision.
+
+## Implementing a Custom Subtractor
+
+If you want to add a new silhouette/background subtraction method, implement the engine's `BackgroundSubtractor` trait and register your subtractor in the background-subtractor selector (the pipeline). The repo already includes examples you can follow: `src/bg_subtract/naive.rs`, `src/bg_subtract/of.rs`, and `src/bg_subtract/test.rs`.
+
+Key points:
+- The trait requires two methods:
+  - `apply(&mut self, input_img: Mat) -> Result<MatExpr>` — produce a mask (MatExpr) from the input image.
+  - `reset(&mut self, background_img: Mat)` — optional: reinitialize internal state with a background image.
+- Use OpenCV types (`opencv::core::Mat`, `MatExpr`) and return `opencv::Result<...>`.
+- Keep any persistent state (e.g., `prev_img` for optical flow) inside your subtractor struct.
 
 ---
 
