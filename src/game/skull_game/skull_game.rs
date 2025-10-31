@@ -432,6 +432,7 @@ impl GameTrait for SkullGame {
 
         match *state {
             GameState::PreGame => {
+                self.update_dynamic_buffers(display, time_step.time_delta)?;
                 self.draw_scenary(frame, time_step, 0)?;
             }
             GameState::Game(round_counter) => {

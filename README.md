@@ -25,7 +25,6 @@ It's named after the philosophical concept Plato came up with, called [Plato's C
 - [Configuration](#configuration)
 - [System Setup](#system-setup)
 - [Engine Architecture & Custom Games](#engine-architecture--custom-games)
-- [Implementing a Custom Subtractor](#implementing-a-custom-subtractor)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -141,6 +140,8 @@ cargo run --release
 
 ## Usage
 
+### Setup
+
 1. **Connect your webcam** and point it at the area where participants will play.
 2. **Set up your projector** so it overlays the play area.
 3. **Run the application**:
@@ -153,7 +154,12 @@ cargo run --release
     - It will capture silhouettes from the camera feed.
     - Project game elements onto detected silhouettes.
     - Participants interact with the projections.
+___
 
+### Default keybinds
+    - **s** call **`start`** function of the currently running game
+    - **r** cal **`reset`** function of the currently running game
+    - **m** toggle minimap modes, that display either the video input or the mask output
 ---
 
 ## System Setup
@@ -215,7 +221,7 @@ To add your own game mode:
 
 You can use both the raw images and silhouette masks to drive your game logic, making it easy to create new interactive experiences that leverage physical movement and computer vision.
 
-## Implementing a Custom Subtractor
+### Implementing a Custom Subtractor
 
 If you want to add a new silhouette/background subtraction method, implement the engine's `BackgroundSubtractor` trait and register your subtractor in the background-subtractor selector (the pipeline). The repo already includes examples you can follow: `src/bg_subtract/naive.rs`, `src/bg_subtract/of.rs`, and `src/bg_subtract/test.rs`.
 
